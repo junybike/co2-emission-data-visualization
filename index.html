@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Check in 2 - Demo</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    .tooltip {
+      position: absolute;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 8px;
+      pointer-events: none;
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+  <h2>Check in 2 - Demo</h2>
+  
+  <button id="resetButton">Reset</button>
+
+  <button id="random10samples">Sample 10 Cars</button>
+
+  <div id="customizer">
+    <h3>Build a car</h3>
+    
+    <label>
+      Engine Size (L):
+      <span id="engineValue">3.0</span>
+    </label> <br>
+    <input id="engineInput" type="range"
+          min="1" max="8" step="0.1" value="3"> <br>
+
+    <label>
+      Cylinders:
+      <span id="cylinderValue">6</span>
+    </label> <br>
+    <input id="cylinderInput" type="range"
+          min="2" max="16" step="1" value="6"> <br>
+
+    <label>
+      Fuel Consumption (L/100km):
+      <span id="fuelValue">10</span>
+    </label> <br>
+    <input id="fuelInput" type="range"
+          min="4" max="20" step="0.1" value="10"> <br>
+
+    <label>Vehicle Class:</label> <br>
+    <select id="classInput">
+      <option value="SUV">SUV</option>
+      <option value="COMPACT">Compact</option>
+      <option value="MID-SIZE">Mid-size</option>
+      <option value="FULL-SIZE">Full-size</option>
+      <option value="TWO-SEATER">Two-seater</option>
+    </select> <br>
+
+    <button id="addCustomCar">Build!</button>
+  
+    <div id="buildMessage"></div> <br>
+    <div id="carInfo"></div> <br>
+  </div>
+
+  <div style="display:flex; gap:40px; align-items:flex-start;">
+    <svg id="scatter" width="700" height="500"></svg>
+    <svg id="barchart" width="500" height="500"></svg>
+  </div>
+  
+  <div class="tooltip"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
