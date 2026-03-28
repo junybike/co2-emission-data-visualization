@@ -2,70 +2,550 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Check in 2 - Demo</title>
+  <title>CO2 Emission Explorer</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
+    :root {
+      --bg-cream: #f4efe4;
+      --bg-light: #fbfaf7;
+      --panel: rgba(255, 255, 255, 0.88);
+      --panel-strong: #fffaf2;
+      --ink: #1d2a35;
+      --muted: #64748b;
+      --border: rgba(29, 42, 53, 0.12);
+      --accent: #11736a;
+      --warm: #c65d2e;
+      --shadow: 0 22px 40px rgba(29, 42, 53, 0.09);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(17, 115, 106, 0.08), transparent 34%),
+        linear-gradient(180deg, var(--bg-cream) 0%, var(--bg-light) 55%, #eef4f3 100%);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .page-shell {
+      max-width: 1460px;
+      margin: 0 auto;
+      padding: 30px 22px 42px;
+    }
+
+    .page-header {
+      margin-bottom: 18px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .page-header h1 {
+      margin: 0;
+      font-size: clamp(2rem, 3.2vw, 3.2rem);
+      line-height: 1.05;
+    }
+
+    .lead {
+      max-width: 760px;
+      margin: 12px 0 0;
+      color: #4b5d6c;
+      line-height: 1.6;
+    }
+
+    .panel,
+    .button-bar,
+    .viz-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: minmax(280px, 340px) auto;
+      gap: 18px;
+      margin-bottom: 20px;
+      align-items: start;
+    }
+
+    .button-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 16px;
+      align-items: center;
+      justify-content: flex-start;
+      justify-self: start;
+      min-width: 360px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(17, 115, 106, 0.18);
+    }
+
+    #resetButton,
+    #random10samples,
+    #addCustomCar {
+      background: linear-gradient(135deg, #17354b, #11736a);
+      color: white;
+      font-weight: 700;
+    }
+
+    #customizer {
+      padding: 20px 22px 18px;
+      background:
+        linear-gradient(135deg, rgba(255, 250, 242, 0.94), rgba(255, 255, 255, 0.9)),
+        var(--panel);
+    }
+
+    #customizer h3 {
+      margin: 0 0 6px;
+      font-size: 1.15rem;
+    }
+
+    .customizer-note {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    .control-group {
+      margin-bottom: 14px;
+    }
+
+    .control-group label {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    input[type="range"],
+    select {
+      width: 100%;
+    }
+
+    input[type="range"] {
+      accent-color: var(--accent);
+    }
+
+    select {
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: white;
+    }
+
+    #buildMessage {
+      min-height: 1.3em;
+      margin-top: 12px;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    #carInfo {
+      min-height: 3em;
+      color: #415463;
+      line-height: 1.55;
+      font-size: 0.95rem;
+    }
+
+    .viz-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      align-items: start;
+    }
+
+    .viz-card {
+      padding: 18px;
+      min-width: 0;
+    }
+
+    .viz-card.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 1.12rem;
+    }
+
+    .card-subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.93rem;
+      line-height: 1.45;
+      max-width: 780px;
+    }
+
+    .chart-frame {
+      overflow: hidden;
+      border-radius: 20px;
+      border: 1px solid rgba(29, 42, 53, 0.08);
+      background:
+        linear-gradient(180deg, rgba(241, 245, 245, 0.74), rgba(255, 255, 255, 0.96));
+    }
+
+    .chart-frame svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      vertical-align: top;
+    }
+
+    .chart-frame--overview {
+      padding: 12px 14px 20px;
+    }
+
+    .chart-frame--overview svg {
+      overflow: visible;
+    }
+
+    .chart-frame--crown {
+      padding: 0;
+    }
+
+    .metric-pills,
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .metric-pill {
+      background: rgba(15, 23, 42, 0.04);
+      color: #334155;
+      font-weight: 700;
+    }
+
+    .metric-pill.is-active {
+      background: linear-gradient(135deg, #17354b, #11736a);
+      color: white;
+    }
+
+    .crown-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 290px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .crown-sidebar {
+      display: grid;
+      gap: 18px;
+    }
+
+    .sidebar-title {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .mini-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid rgba(29, 42, 53, 0.08);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.82);
+      color: #334155;
+      font-weight: 600;
+    }
+
+    .legend-item.inactive {
+      opacity: 0.45;
+    }
+
+    .legend-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45);
+    }
+
+    #crownPinned {
+      padding: 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(29, 42, 53, 0.08);
+      background:
+        linear-gradient(180deg, rgba(255, 248, 237, 0.9), rgba(255, 255, 255, 0.95));
+      min-height: 180px;
+    }
+
+    #crownPinned.empty {
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      line-height: 1.5;
+    }
+
+    #crownPinned h3 {
+      margin: 0 0 12px;
+      font-size: 1rem;
+    }
+
+    .details-hero {
+      display: grid;
+      gap: 4px;
+      margin-bottom: 14px;
+    }
+
+    .details-hero strong {
+      font-size: 1rem;
+    }
+
+    .details-hero span {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .details-copy {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .details-copy div {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.92rem;
+    }
+
+    .details-copy span {
+      color: var(--muted);
+    }
+
+    .clear-pin {
+      background: #fff3e8;
+      color: #9a3412;
+      font-weight: 700;
+    }
+
     .tooltip {
       position: absolute;
-      background: white;
-      border: 1px solid #ccc;
-      padding: 8px;
-      pointer-events: none;
+      top: 0;
+      left: 0;
       opacity: 0;
+      max-width: 260px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.94);
+      color: #f8fafc;
+      box-shadow: 0 22px 34px rgba(15, 23, 42, 0.24);
+      pointer-events: none;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      transition: opacity 120ms ease;
+    }
+
+    .tooltip strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.96rem;
+    }
+
+    @media (max-width: 1180px) {
+      .control-row {
+        grid-template-columns: 1fr;
+      }
+
+      .viz-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .crown-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page-shell {
+        padding: 20px 14px 28px;
+      }
+
+      .card-header {
+        flex-direction: column;
+      }
+
+      .button-bar {
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
-  <h2>Check in 2 - Demo</h2>
-  
-  <button id="resetButton">Reset</button>
+  <div class="page-shell">
+    <header class="page-header">
+      <p class="eyebrow">CMPT 467 vehicle emissions explorer</p>
+      <h1>CO2 Emission Explorer</h1>
+      <p class="lead">
+        Compare sampled vehicles, scan make-level patterns, and open the new CO2 Crown to inspect one manufacturer as a ranked radial detail view.
+      </p>
+    </header>
 
-  <button id="random10samples">Sample 10 Cars</button>
+    <div class="control-row">
+      <div id="customizer" class="panel">
+        <h3>Build a Car</h3>
+        <p class="customizer-note">
+          Match a nearby vehicle from the dataset and add it into the scatter without losing the linked make interactions.
+        </p>
 
-  <div id="customizer">
-    <h3>Build a car</h3>
-    
-    <label>
-      Engine Size (L):
-      <span id="engineValue">3.0</span>
-    </label> <br>
-    <input id="engineInput" type="range"
-          min="1" max="8" step="0.1" value="3"> <br>
+        <div class="control-group">
+          <label>
+            <span>Engine size (L)</span>
+            <span id="engineValue">3.0</span>
+          </label>
+          <input id="engineInput" type="range" min="1" max="8" step="0.1" value="3" />
+        </div>
 
-    <label>
-      Cylinders:
-      <span id="cylinderValue">6</span>
-    </label> <br>
-    <input id="cylinderInput" type="range"
-          min="2" max="16" step="1" value="6"> <br>
+        <div class="control-group">
+          <label>
+            <span>Cylinders</span>
+            <span id="cylinderValue">6</span>
+          </label>
+          <input id="cylinderInput" type="range" min="2" max="16" step="1" value="6" />
+        </div>
 
-    <label>
-      Fuel Consumption (L/100km):
-      <span id="fuelValue">10</span>
-    </label> <br>
-    <input id="fuelInput" type="range"
-          min="4" max="20" step="0.1" value="10"> <br>
+        <div class="control-group">
+          <label>
+            <span>Fuel consumption (L/100 km)</span>
+            <span id="fuelValue">10</span>
+          </label>
+          <input id="fuelInput" type="range" min="4" max="20" step="0.1" value="10" />
+        </div>
 
-    <label>Vehicle Class:</label> <br>
-    <select id="classInput">
-      <option value="SUV">SUV</option>
-      <option value="COMPACT">Compact</option>
-      <option value="MID-SIZE">Mid-size</option>
-      <option value="FULL-SIZE">Full-size</option>
-      <option value="TWO-SEATER">Two-seater</option>
-    </select> <br>
+        <div class="control-group">
+          <label for="classInput">Vehicle class</label>
+          <select id="classInput">
+            <option value="SUV">SUV</option>
+            <option value="COMPACT">Compact</option>
+            <option value="MID-SIZE">Mid-size</option>
+            <option value="FULL-SIZE">Full-size</option>
+            <option value="TWO-SEATER">Two-seater</option>
+          </select>
+        </div>
 
-    <button id="addCustomCar">Build!</button>
-  
-    <div id="buildMessage"></div> <br>
-    <div id="carInfo"></div> <br>
+        <button id="addCustomCar">Build!</button>
+        <div id="buildMessage"></div>
+        <div id="carInfo"></div>
+      </div>
+
+      <div class="button-bar">
+        <button id="resetButton">Reset</button>
+        <button id="random10samples">Sample 10 Cars</button>
+      </div>
+    </div>
+
+    <div class="viz-grid">
+      <section class="viz-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Sampled Vehicle Scatter</h2>
+            <p class="card-subtitle">
+              Combined fuel consumption versus CO2 emissions for sampled cars. Click a point to switch the active make in the crown.
+            </p>
+          </div>
+        </div>
+        <div class="chart-frame chart-frame--overview">
+          <svg id="scatter" width="920" height="660" viewBox="0 0 920 660" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+      </section>
+
+      <section class="viz-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Make Overview</h2>
+            <p class="card-subtitle">
+              Bars show how many model entries each make has, and the orange line shows average CO2. Click a bar to select a make and brush the lane below to highlight matching makes in the scatter.
+            </p>
+          </div>
+        </div>
+        <div class="chart-frame chart-frame--overview">
+          <svg id="barchart" width="940" height="700" viewBox="0 0 940 700" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+      </section>
+
+      <section class="viz-card full-width">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">CO2 Crown</h2>
+            <p id="crownSubtitle" class="card-subtitle">Loading make details...</p>
+          </div>
+          <div id="crownMetricControls" class="metric-pills" aria-label="CO2 Crown metric controls"></div>
+        </div>
+
+        <div class="crown-layout">
+          <div class="chart-frame chart-frame--crown">
+            <svg id="crown" width="1200" height="720" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
+
+          <aside class="crown-sidebar">
+            <div>
+              <h3 class="sidebar-title">Fuel Filter</h3>
+              <p class="mini-note">
+                Toggle fuel families to dim or isolate related vehicles in both the crown and the scatter.
+              </p>
+              <div id="crownLegend" class="legend"></div>
+            </div>
+
+            <div id="crownPinned" class="empty">
+              Pin a point in the crown to inspect one vehicle in detail.
+            </div>
+          </aside>
+        </div>
+      </section>
+    </div>
   </div>
 
-  <div style="display:flex; gap:40px; align-items:flex-start;">
-    <svg id="scatter" width="700" height="500"></svg>
-    <svg id="barchart" width="500" height="500"></svg>
-  </div>
-  
   <div class="tooltip"></div>
 
   <script type="module" src="js/main.js"></script>
