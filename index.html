@@ -264,16 +264,71 @@
       color: white;
     }
 
-    .crown-layout {
+    .crown-tools {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 290px;
+      gap: 12px;
+      justify-items: end;
+    }
+
+    .compare-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .compare-select {
+      display: grid;
+      gap: 6px;
+      min-width: 180px;
+      color: #334155;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .compare-select select {
+      min-width: 180px;
+    }
+
+    .crown-shared-bar {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 18px;
+      padding: 16px 18px;
+      border: 1px solid rgba(29, 42, 53, 0.08);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.76);
+    }
+
+    .crown-compare-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
       gap: 18px;
       align-items: start;
     }
 
-    .crown-sidebar {
+    .crown-compare-layout.has-compare {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .crown-panel {
       display: grid;
-      gap: 18px;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .crown-panel.is-hidden {
+      display: none;
+    }
+
+    .crown-panel-header {
+      display: grid;
+      gap: 4px;
+    }
+
+    .crown-panel-title {
+      margin: 0;
+      font-size: 1rem;
     }
 
     .sidebar-title {
@@ -311,7 +366,7 @@
       box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45);
     }
 
-    #crownPinned {
+    .crown-pinned {
       padding: 16px;
       border-radius: 20px;
       border: 1px solid rgba(29, 42, 53, 0.08);
@@ -320,14 +375,14 @@
       min-height: 180px;
     }
 
-    #crownPinned.empty {
+    .crown-pinned.empty {
       color: var(--muted);
       display: flex;
       align-items: center;
       line-height: 1.5;
     }
 
-    #crownPinned h3 {
+    .crown-pinned h3 {
       margin: 0 0 12px;
       font-size: 1rem;
     }
@@ -403,8 +458,16 @@
         grid-template-columns: 1fr;
       }
 
-      .crown-layout {
+      .crown-compare-layout.has-compare {
         grid-template-columns: 1fr;
+      }
+
+      .crown-tools {
+        justify-items: stretch;
+      }
+
+      .compare-controls {
+        justify-content: flex-start;
       }
     }
 
@@ -619,29 +682,63 @@
         <div class="card-header">
           <div>
             <h2 class="card-title">CO2 Crown</h2>
-            <p id="crownSubtitle" class="card-subtitle">Loading make details...</p>
+            <p class="card-subtitle">
+              Compare one or two manufacturers side by side. The second crown only appears when you choose a compare make.
+            </p>
           </div>
-          <div id="crownMetricControls" class="metric-pills" aria-label="CO2 Crown metric controls"></div>
+          <div class="crown-tools">
+            <div id="crownMetricControls" class="metric-pills" aria-label="CO2 Crown metric controls"></div>
+            <div class="compare-controls" aria-label="Crown compare controls">
+              <label class="compare-select" for="primaryMakeSelect">
+                <span>Primary make</span>
+                <select id="primaryMakeSelect"></select>
+              </label>
+              <label class="compare-select" for="secondaryMakeSelect">
+                <span>Compare with</span>
+                <select id="secondaryMakeSelect"></select>
+              </label>
+            </div>
+          </div>
         </div>
 
-        <div class="crown-layout">
-          <div class="chart-frame chart-frame--crown">
-            <svg id="crown" width="1200" height="720" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="crown-shared-bar">
+          <div>
+            <h3 class="sidebar-title">Fuel Filter</h3>
+            <p class="mini-note">
+              Toggle fuel families to dim or isolate related vehicles in both crowns and in the scatter.
+            </p>
           </div>
+          <div id="crownLegend" class="legend"></div>
+        </div>
 
-          <aside class="crown-sidebar">
-            <div>
-              <h3 class="sidebar-title">Fuel Filter</h3>
-              <p class="mini-note">
-                Toggle fuel families to dim or isolate related vehicles in both the crown and the scatter.
-              </p>
-              <div id="crownLegend" class="legend"></div>
+        <div id="crownCompareLayout" class="crown-compare-layout">
+          <section id="crownPanelPrimary" class="crown-panel">
+            <div class="crown-panel-header">
+              <h3 id="crownPanelTitlePrimary" class="crown-panel-title">Primary crown</h3>
+              <p id="crownSubtitlePrimary" class="card-subtitle">Loading make details...</p>
             </div>
-
-            <div id="crownPinned" class="empty">
+            <div class="chart-frame chart-frame--crown">
+              <svg id="crownPrimary" width="920" height="660" viewBox="0 0 920 660" preserveAspectRatio="xMidYMid meet"></svg>
+            </div>
+            <div id="crownPinnedPrimary" class="crown-pinned empty">
               Pin a point in the crown to inspect one vehicle in detail.
             </div>
-          </aside>
+          </section>
+
+          <section id="crownPanelSecondary" class="crown-panel is-hidden">
+            <div class="crown-panel-header">
+              <h3 id="crownPanelTitleSecondary" class="crown-panel-title">Compare crown</h3>
+              <p id="crownSubtitleSecondary" class="card-subtitle">
+                Choose a second make from the compare dropdown to open a second crown.
+              </p>
+            </div>
+            <div class="chart-frame chart-frame--crown">
+              <svg id="crownSecondary" width="920" height="660" viewBox="0 0 920 660" preserveAspectRatio="xMidYMid meet"></svg>
+            </div>
+            <div id="crownPinnedSecondary" class="crown-pinned empty">
+              Choose a second make to compare crowns side by side.
+            </div>
+          </section>
         </div>
       </section>
     </div>
