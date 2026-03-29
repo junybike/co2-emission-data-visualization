@@ -13,7 +13,8 @@ export function createAppState(fullData, manufacturerStats) {
     crownMetric: "gap",
     activeFuelTypes: [...allFuelTypes],
     hoveredCar: null,
-    pinnedCar: null
+    pinnedCar: null,
+    activeVehicleClasses: []
   };
 
   const dispatch = d3.dispatch("change");
@@ -24,6 +25,7 @@ export function createAppState(fullData, manufacturerStats) {
       ...state,
       brushedMakes: [...state.brushedMakes],
       activeFuelTypes: [...state.activeFuelTypes],
+      activeVehicleClasses: [...state.activeVehicleClasses],
       allFuelTypes: [...allFuelTypes]
     };
   }
@@ -128,6 +130,17 @@ export function createAppState(fullData, manufacturerStats) {
     emit("fuelFilter");
   }
 
+  function toggleVehicleClass(groupKey) {
+    const active = state.activeVehicleClasses;
+    const idx = active.indexOf(groupKey);
+    if (idx === -1) {
+      state.activeVehicleClasses = [...active, groupKey];
+    } else {
+      state.activeVehicleClasses = active.filter(k => k !== groupKey);
+    }
+    emit("vehicleClasses");
+  }
+
   function resetInteractions() {
     state.activeMake = defaultMake;
     state.brushedMakes = [];
@@ -135,6 +148,7 @@ export function createAppState(fullData, manufacturerStats) {
     state.activeFuelTypes = [...allFuelTypes];
     state.hoveredCar = null;
     state.pinnedCar = null;
+    state.activeVehicleClasses = [];
 
     emit("resetInteractions");
   }
@@ -151,6 +165,7 @@ export function createAppState(fullData, manufacturerStats) {
     clearPinnedCar,
     setCrownMetric,
     toggleFuelType,
+    toggleVehicleClass,
     resetInteractions
   };
 }

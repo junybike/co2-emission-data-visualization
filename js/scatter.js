@@ -73,7 +73,22 @@ export function createScatter(store) {
     .text("CO2 emissions (g/km)");
 
   store.subscribe((state, reason) => {
-    const data = state.currentPoints;
+    const { CLASS_GROUPS } = window._spiderClassGroups || {};
+    const activeGroups = state.activeVehicleClasses || [];
+
+    // Build the set of raw vehicleclass strings that are allowed
+    let allowedClasses = null;
+    if (CLASS_GROUPS && activeGroups.length > 0) {
+      allowedClasses = new Set();
+      activeGroups.forEach(key => {
+        (CLASS_GROUPS[key]?.classes || []).forEach(c => allowedClasses.add(c.toUpperCase()));
+      });
+    }
+
+    const data = allowedClasses
+      ? state.currentPoints.filter(d => allowedClasses.has((d.vehicleclass || "").toUpperCase()))
+      : state.currentPoints;
+
     const transitionDuration = reason === "hoveredCar" ? 150 : 450;
     const transition = svg.transition().duration(transitionDuration).ease(d3.easeCubicOut);
 
