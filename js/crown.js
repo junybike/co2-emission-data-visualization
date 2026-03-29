@@ -121,8 +121,8 @@ function renderLens(layer, config) {
 
   layer.selectAll("*").remove();
 
-  const panelWidth = 560;
-  const panelHeight = 244;
+  const panelWidth = 600;
+  const panelHeight = 292;
   const panelTop = -164;
   const chartOffsetY = 122;
   const panel = layer.append("g").attr("class", "focus-lens").style("pointer-events", "none");
