@@ -178,7 +178,7 @@ export function createBarchart(store) {
           `<strong>${d.make}</strong>
           ${d.count} model variants<br/>
           Avg CO2: ${d3.format(".1f")(d.avgCO2)} g/km<br/>
-          Click to set the crown to this make`
+          Click to set the primary crown make`
         );
     })
     .on("mousemove", event => {
@@ -191,7 +191,7 @@ export function createBarchart(store) {
     })
     .on("click", (event, d) => {
       event.stopPropagation();
-      store.setActiveMake(d.make);
+      store.setPrimaryMake(d.make);
     });
 
   const linePoints = pointLayer
@@ -211,7 +211,7 @@ export function createBarchart(store) {
         .html(
           `<strong>${d.make}</strong>
           Avg CO2: ${d3.format(".1f")(d.avgCO2)} g/km<br/>
-          Click to set the crown to this make`
+          Click to set the primary crown make`
         );
     })
     .on("mousemove", event => {
@@ -224,7 +224,7 @@ export function createBarchart(store) {
     })
     .on("click", (event, d) => {
       event.stopPropagation();
-      store.setActiveMake(d.make);
+      store.setPrimaryMake(d.make);
     });
 
   store.subscribe(state => {
@@ -232,17 +232,41 @@ export function createBarchart(store) {
     const hasBrush = brushedMakes.size > 0;
 
     bars
-      .attr("fill", d => (d.make === state.activeMake ? "#11736a" : "#9cc8c2"))
-      .attr("stroke", d => (d.make === state.activeMake ? "#0f172a" : "none"))
-      .attr("stroke-width", d => (d.make === state.activeMake ? 1.4 : 0))
+      .attr("fill", d => {
+        if (d.make === state.primaryMake) return "#11736a";
+        if (d.make === state.secondaryMake) return "#c65d2e";
+        return "#9cc8c2";
+      })
+      .attr("stroke", d => {
+        if (d.make === state.primaryMake) return "#0f172a";
+        if (d.make === state.secondaryMake) return "#7c2d12";
+        return "none";
+      })
+      .attr("stroke-width", d => {
+        if (d.make === state.primaryMake) return 1.4;
+        if (d.make === state.secondaryMake) return 1.2;
+        return 0;
+      })
       .attr("opacity", d => {
         if (!hasBrush) return 0.92;
         return brushedMakes.has(d.make) ? 0.96 : 0.28;
       });
 
     linePoints
-      .attr("r", d => (d.make === state.activeMake ? 6 : 4.4))
-      .attr("fill", d => (d.make === state.activeMake ? "#d97745" : "#fff7ed"))
+      .attr("r", d => {
+        if (d.make === state.primaryMake) return 6;
+        if (d.make === state.secondaryMake) return 5.2;
+        return 4.4;
+      })
+      .attr("fill", d => {
+        if (d.make === state.primaryMake) return "#d97745";
+        if (d.make === state.secondaryMake) return "#fed7aa";
+        return "#fff7ed";
+      })
+      .attr("stroke", d => {
+        if (d.make === state.secondaryMake) return "#c65d2e";
+        return "#d97745";
+      })
       .attr("opacity", d => {
         if (!hasBrush) return 1;
         return brushedMakes.has(d.make) ? 1 : 0.22;
@@ -251,11 +275,16 @@ export function createBarchart(store) {
     xAxis
       .selectAll("text")
       .attr("fill", d => {
-        if (d === state.activeMake) return "#0f172a";
+        if (d === state.primaryMake) return "#0f172a";
+        if (d === state.secondaryMake) return "#9a3412";
         if (hasBrush && !brushedMakes.has(d)) return "#94a3b8";
         return "#475569";
       })
-      .attr("font-weight", d => (d === state.activeMake ? 700 : 500));
+      .attr("font-weight", d => {
+        if (d === state.primaryMake) return 700;
+        if (d === state.secondaryMake) return 700;
+        return 500;
+      });
 
     if (!hasBrush) {
       brushingProgrammatically = true;

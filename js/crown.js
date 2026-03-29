@@ -68,8 +68,10 @@ function durationForReason(reason) {
       return 340;
     case "crownMetric":
       return 520;
-    case "activeMake":
-    case "activeMakeRefresh":
+    case "primaryMake":
+    case "primaryMakeRefresh":
+    case "secondaryMake":
+    case "secondaryMakeRefresh":
       return 640;
     default:
       return 420;
@@ -97,6 +99,14 @@ function truncateLabel(value, maxChars = 40) {
   return text.length > maxChars ? `${text.slice(0, maxChars - 1)}…` : text;
 }
 
+function makeForSlot(state, slotKey) {
+  return slotKey === "primary" ? state.primaryMake : state.secondaryMake;
+}
+
+function focusForSlot(state, slotKey) {
+  return state.crownFocus?.[slotKey] ?? { hoveredCar: null, pinnedCar: null };
+}
+
 function renderLens(layer, config) {
   const {
     ranked,
@@ -106,14 +116,13 @@ function renderLens(layer, config) {
     metricMax,
     hoveredCar,
     pinnedCar,
-    activeFuelTypes,
-    width
+    activeFuelTypes
   } = config;
 
   layer.selectAll("*").remove();
 
-  const panelWidth = 560;
-  const panelHeight = 244;
+  const panelWidth = 600;
+  const panelHeight = 292;
   const panelTop = -164;
   const chartOffsetY = 122;
   const panel = layer.append("g").attr("class", "focus-lens").style("pointer-events", "none");
@@ -318,86 +327,94 @@ function renderLens(layer, config) {
   }
 }
 
-export function createCrown(store) {
-  const svg = d3.select("#crown");
+function createCrownPanel(store, config) {
+  const {
+    slotKey,
+    panelSelector,
+    subtitleSelector,
+    svgSelector,
+    pinnedSelector,
+    titleSelector
+  } = config;
+
+  const panel = d3.select(panelSelector);
+  const svg = d3.select(svgSelector);
   const width = +svg.attr("width");
   const height = +svg.attr("height");
   const tooltip = d3.select(".tooltip");
-  const subtitle = d3.select("#crownSubtitle");
-  const metricControls = d3.select("#crownMetricControls");
-  const legend = d3.select("#crownLegend");
-  const pinnedPanel = d3.select("#crownPinned");
+  const subtitle = d3.select(subtitleSelector);
+  const pinnedPanel = d3.select(pinnedSelector);
+  const title = d3.select(titleSelector);
 
   svg
     .attr("viewBox", `0 0 ${width} ${height}`)
     .attr("preserveAspectRatio", "xMidYMid meet");
 
-  const center = { x: width / 2, y: height - 54 };
   const startAngle = -1.2;
   const endAngle = 1.2;
-  const baseRadius = 190;
-  const maxSpokeLength = 116;
+  const baseRadius = Math.min(width * 0.22, height * 0.34, 190);
+  const maxSpokeLength = Math.min(width * 0.14, 116);
+  const center = { x: width / 2, y: height - 54 };
+  const lensTranslateY = -(height - 228);
 
   const root = svg.append("g").attr("transform", `translate(${center.x}, ${center.y})`);
-  const lensLayer = root.append("g").attr("class", "lens-layer").attr("transform", "translate(0, -478)");
+  const lensLayer = root.append("g").attr("class", "lens-layer").attr("transform", `translate(0, ${lensTranslateY})`);
   const haloLayer = root.append("g").attr("class", "halo-layer");
   const referenceLayer = root.append("g").attr("class", "reference-layer");
   const spokeLayer = root.append("g").attr("class", "spoke-layer");
   const annotationLayer = root.append("g").attr("class", "annotation-layer");
   const focusLayer = root.append("g").attr("class", "focus-layer");
 
-  const metricEntries = Object.entries(CROWN_METRICS).map(([key, config]) => ({
-    key,
-    ...config
-  }));
-
-  const metricButtons = metricControls
-    .selectAll("button")
-    .data(metricEntries)
-    .join("button")
-    .attr("type", "button")
-    .attr("class", "metric-pill")
-    .text(d => d.label)
-    .on("click", (_, d) => {
-      store.setCrownMetric(d.key);
-    });
-
-  const legendItems = legend
-    .selectAll("button")
-    .data(store.getState().allFuelTypes)
-    .join("button")
-    .attr("type", "button")
-    .attr("class", "legend-item")
-    .on("click", (_, fuelType) => {
-      store.toggleFuelType(fuelType);
-    });
-
-  legendItems
-    .append("span")
-    .attr("class", "legend-swatch")
-    .style("background", fuelType => FUEL_TYPE_COLORS[fuelType] ?? "#4c6073");
-
-  legendItems
-    .append("span")
-    .attr("class", "legend-label")
-    .text(fuelType => FUEL_TYPE_LABELS[fuelType] ?? fuelType);
-
   store.subscribe((state, reason) => {
+    const make = makeForSlot(state, slotKey);
+    const slotFocus = focusForSlot(state, slotKey);
     const activeFuelTypes = new Set(state.activeFuelTypes);
     const crownMetric = CROWN_METRICS[state.crownMetric];
+
+    title.text(slotKey === "primary" ? "Primary crown" : "Compare crown");
+
+    if (!make) {
+      panel.classed("is-hidden", slotKey === "secondary");
+      subtitle.text(slotKey === "secondary"
+        ? "Choose a second make from the compare dropdown to open a second crown."
+        : "No make selected.");
+
+      haloLayer.selectAll("*").remove();
+      referenceLayer.selectAll("*").remove();
+      spokeLayer.selectAll("*").remove();
+      annotationLayer.selectAll("*").remove();
+      focusLayer.selectAll("*").remove();
+      lensLayer.selectAll("*").remove();
+
+      pinnedPanel
+        .classed("empty", true)
+        .html(slotKey === "secondary"
+          ? "Choose a second make to compare crowns side by side."
+          : "Pin a point in the crown to inspect one vehicle in detail.");
+      return;
+    }
+
+    panel.classed("is-hidden", false);
+
     const crownData = state.fullData
-      .filter(d => d.make === state.activeMake)
+      .filter(d => d.make === make)
       .sort((a, b) => d3.ascending(a.co2, b.co2) || d3.ascending(a.model, b.model));
 
-    metricButtons.classed("is-active", d => d.key === state.crownMetric);
-    legendItems.classed("inactive", fuelType => !activeFuelTypes.has(fuelType));
-
-    if (state.hoveredCar == null) {
-      tooltip.style("opacity", 0);
+    if (slotKey === "primary" && state.secondaryMake) {
+      subtitle.text(
+        `${make} • ${crownData.length} vehicles. Comparing side by side with ${state.secondaryMake}.`
+      );
+    } else if (slotKey === "secondary" && state.primaryMake) {
+      subtitle.text(
+        `${make} • ${crownData.length} vehicles. Comparing side by side with ${state.primaryMake}.`
+      );
+    } else {
+      subtitle.text(
+        `${make} • ${crownData.length} vehicles ranked from lowest CO2 on the left to highest on the right.`
+      );
     }
 
     if (crownData.length === 0) {
-      subtitle.text("No vehicles available for the selected make.");
       haloLayer.selectAll("*").remove();
       referenceLayer.selectAll("*").remove();
       spokeLayer.selectAll("*").remove();
@@ -421,10 +438,6 @@ export function createCrown(store) {
 
       return;
     }
-
-    subtitle.text(
-      `${state.activeMake} • ${crownData.length} vehicles ranked from lowest CO2 on the left to highest on the right. Hover any point to zoom its local neighborhood.`
-    );
 
     const angleScale = d3
       .scaleLinear()
@@ -453,10 +466,10 @@ export function createCrown(store) {
 
     const rankLookup = new Map(ranked.map(item => [item.id, item.rank]));
     const focusCar =
-      (state.hoveredCar && state.hoveredCar.make === state.activeMake && state.hoveredCar) ||
-      (state.pinnedCar && state.pinnedCar.make === state.activeMake && state.pinnedCar) ||
+      (slotFocus.hoveredCar && slotFocus.hoveredCar.make === make && slotFocus.hoveredCar) ||
+      (slotFocus.pinnedCar && slotFocus.pinnedCar.make === make && slotFocus.pinnedCar) ||
       null;
-    const hasPinned = Boolean(state.pinnedCar && state.pinnedCar.make === state.activeMake);
+    const hasPinned = Boolean(slotFocus.pinnedCar && slotFocus.pinnedCar.make === make);
     const transition = svg
       .transition()
       .duration(durationForReason(reason))
@@ -468,10 +481,9 @@ export function createCrown(store) {
       metricKey: state.crownMetric,
       crownMetric,
       metricMax,
-      hoveredCar: state.hoveredCar,
-      pinnedCar: state.pinnedCar,
-      activeFuelTypes,
-      width
+      hoveredCar: slotFocus.hoveredCar,
+      pinnedCar: slotFocus.pinnedCar,
+      activeFuelTypes
     });
 
     haloLayer
@@ -543,7 +555,7 @@ export function createCrown(store) {
         exit => exit.transition(transition).style("opacity", 0).remove()
       )
       .on("mouseenter", (event, d) => {
-        store.setHoveredCar(d);
+        store.setHoveredCar(slotKey, d);
 
         tooltip
           .style("opacity", 1)
@@ -564,12 +576,12 @@ export function createCrown(store) {
       })
       .on("mouseleave", () => {
         tooltip.style("opacity", 0);
-        store.setHoveredCar(null);
+        store.setHoveredCar(slotKey, null);
       })
       .on("click", (event, d) => {
         event.stopPropagation();
         tooltip.style("opacity", 0);
-        store.togglePinnedCar(d);
+        store.togglePinnedCar(slotKey, d);
       });
 
     items
@@ -587,13 +599,13 @@ export function createCrown(store) {
       .attr("cx", d => d.tipPoint.x)
       .attr("cy", d => d.tipPoint.y)
       .attr("r", d => {
-        if (state.pinnedCar?.id === d.id) return sizeScale(d.engine) + 6.8;
-        if (state.hoveredCar?.id === d.id) return sizeScale(d.engine) + 4.8;
+        if (slotFocus.pinnedCar?.id === d.id) return sizeScale(d.engine) + 6.8;
+        if (slotFocus.hoveredCar?.id === d.id) return sizeScale(d.engine) + 4.8;
         return 0;
       })
-      .attr("fill", d => (state.pinnedCar?.id === d.id ? "rgba(17, 115, 106, 0.12)" : "rgba(249, 115, 22, 0.10)"))
-      .attr("stroke", d => (state.pinnedCar?.id === d.id ? "rgba(17, 115, 106, 0.36)" : "rgba(249, 115, 22, 0.28)"))
-      .attr("stroke-width", d => (state.pinnedCar?.id === d.id || state.hoveredCar?.id === d.id ? 1.2 : 0));
+      .attr("fill", d => (slotFocus.pinnedCar?.id === d.id ? "rgba(17, 115, 106, 0.12)" : "rgba(249, 115, 22, 0.10)"))
+      .attr("stroke", d => (slotFocus.pinnedCar?.id === d.id ? "rgba(17, 115, 106, 0.36)" : "rgba(249, 115, 22, 0.28)"))
+      .attr("stroke-width", d => (slotFocus.pinnedCar?.id === d.id || slotFocus.hoveredCar?.id === d.id ? 1.2 : 0));
 
     items
       .select(".spoke")
@@ -605,12 +617,12 @@ export function createCrown(store) {
       .attr("stroke", d => FUEL_TYPE_COLORS[d.fueltype] ?? "#4c6073")
       .attr("stroke-linecap", "round")
       .attr("stroke-width", d => {
-        if (state.pinnedCar?.id === d.id) return 3.1;
-        if (state.hoveredCar?.id === d.id) return 2.3;
+        if (slotFocus.pinnedCar?.id === d.id) return 3.1;
+        if (slotFocus.hoveredCar?.id === d.id) return 2.3;
         return 1.15;
       })
       .attr("stroke-opacity", d => {
-        if (state.pinnedCar?.id === d.id || state.hoveredCar?.id === d.id) return 1;
+        if (slotFocus.pinnedCar?.id === d.id || slotFocus.hoveredCar?.id === d.id) return 1;
         if (!activeFuelTypes.has(d.fueltype)) return 0.08;
         if (hasPinned) return 0.2;
         return 0.44;
@@ -631,30 +643,30 @@ export function createCrown(store) {
       .attr("cx", d => d.tipPoint.x)
       .attr("cy", d => d.tipPoint.y)
       .attr("r", d => {
-        if (state.pinnedCar?.id === d.id) return sizeScale(d.engine) + 1.8;
-        if (state.hoveredCar?.id === d.id) return sizeScale(d.engine) + 1.1;
+        if (slotFocus.pinnedCar?.id === d.id) return sizeScale(d.engine) + 1.8;
+        if (slotFocus.hoveredCar?.id === d.id) return sizeScale(d.engine) + 1.1;
         return sizeScale(d.engine);
       })
       .attr("fill", d => FUEL_TYPE_COLORS[d.fueltype] ?? "#4c6073")
       .attr("opacity", d => {
-        if (state.pinnedCar?.id === d.id || state.hoveredCar?.id === d.id) return 1;
+        if (slotFocus.pinnedCar?.id === d.id || slotFocus.hoveredCar?.id === d.id) return 1;
         if (!activeFuelTypes.has(d.fueltype)) return 0.14;
         if (hasPinned) return 0.46;
         return 0.74;
       })
       .attr("stroke", d => {
-        if (state.pinnedCar?.id === d.id) return "#0f172a";
-        if (state.hoveredCar?.id === d.id) return "#f97316";
+        if (slotFocus.pinnedCar?.id === d.id) return "#0f172a";
+        if (slotFocus.hoveredCar?.id === d.id) return "#f97316";
         return "rgba(255, 255, 255, 0.88)";
       })
       .attr("stroke-width", d => {
-        if (state.pinnedCar?.id === d.id) return 2.8;
-        if (state.hoveredCar?.id === d.id) return 2;
+        if (slotFocus.pinnedCar?.id === d.id) return 2.8;
+        if (slotFocus.hoveredCar?.id === d.id) return 2;
         return 1;
       });
 
     items
-      .filter(d => state.pinnedCar?.id === d.id || state.hoveredCar?.id === d.id)
+      .filter(d => slotFocus.hoveredCar?.id === d.id || slotFocus.pinnedCar?.id === d.id)
       .raise();
 
     const leftAnchor = polarPoint(startAngle, baseRadius - 12);
@@ -725,7 +737,7 @@ export function createCrown(store) {
       .text(d => d.value);
 
     focusLayer.selectAll("*").remove();
-    const pinnedEntry = hasPinned ? ranked.find(item => item.id === state.pinnedCar.id) : null;
+    const pinnedEntry = hasPinned ? ranked.find(item => item.id === slotFocus.pinnedCar.id) : null;
     if (pinnedEntry) {
       const nearEdge = Math.abs(pinnedEntry.tipPoint.x) > baseRadius * 0.82;
       const anchor = nearEdge ? "middle" : pinnedEntry.tipPoint.x >= 0 ? "start" : "end";
@@ -779,33 +791,134 @@ export function createCrown(store) {
         .text(`${formatValue(pinnedEntry, state.crownMetric)} • rank ${pinnedEntry.rank}`);
     }
 
-    if (state.pinnedCar && state.pinnedCar.make === state.activeMake) {
+    if (slotFocus.pinnedCar && slotFocus.pinnedCar.make === make) {
       pinnedPanel
         .classed("empty", false)
         .html(
           `<h3>Pinned Vehicle</h3>
           <div class="details-hero">
-            <strong>${escapeHtml(state.pinnedCar.make)} ${escapeHtml(state.pinnedCar.model)}</strong>
-            <span>${escapeHtml(state.pinnedCar.vehicleclass)} • rank ${rankLookup.get(state.pinnedCar.id)} of ${ranked.length}</span>
+            <strong>${escapeHtml(slotFocus.pinnedCar.make)} ${escapeHtml(slotFocus.pinnedCar.model)}</strong>
+            <span>${escapeHtml(slotFocus.pinnedCar.vehicleclass)} • rank ${rankLookup.get(slotFocus.pinnedCar.id)} of ${ranked.length}</span>
           </div>
           <div class="details-copy">
-            <div><span>CO2 emissions</span><strong>${state.pinnedCar.co2} g/km</strong></div>
-            <div><span>Engine</span><strong>${d3.format(".1f")(state.pinnedCar.engine)} L</strong></div>
-            <div><span>Cylinders</span><strong>${state.pinnedCar.cyl}</strong></div>
-            <div><span>Fuel type</span><strong>${escapeHtml(FUEL_TYPE_LABELS[state.pinnedCar.fueltype] ?? state.pinnedCar.fueltype)}</strong></div>
-            <div><span>${escapeHtml(crownMetric.label)}</span><strong>${formatValue(state.pinnedCar, state.crownMetric)}</strong></div>
-            <div><span>Transmission</span><strong>${escapeHtml(state.pinnedCar.transmission)}</strong></div>
+            <div><span>CO2 emissions</span><strong>${slotFocus.pinnedCar.co2} g/km</strong></div>
+            <div><span>Engine</span><strong>${d3.format(".1f")(slotFocus.pinnedCar.engine)} L</strong></div>
+            <div><span>Cylinders</span><strong>${slotFocus.pinnedCar.cyl}</strong></div>
+            <div><span>Fuel type</span><strong>${escapeHtml(FUEL_TYPE_LABELS[slotFocus.pinnedCar.fueltype] ?? slotFocus.pinnedCar.fueltype)}</strong></div>
+            <div><span>${escapeHtml(crownMetric.label)}</span><strong>${formatValue(slotFocus.pinnedCar, state.crownMetric)}</strong></div>
+            <div><span>Transmission</span><strong>${escapeHtml(slotFocus.pinnedCar.transmission)}</strong></div>
           </div>
           <button type="button" class="clear-pin">Clear pin</button>`
         );
 
       pinnedPanel.select(".clear-pin").on("click", () => {
-        store.clearPinnedCar();
+        store.clearPinnedCar(slotKey);
       });
     } else {
       pinnedPanel
         .classed("empty", true)
         .html("Pin a point in the crown to inspect one vehicle in detail.");
     }
+  });
+}
+
+export function createCrown(store) {
+  const metricControls = d3.select("#crownMetricControls");
+  const legend = d3.select("#crownLegend");
+  const primarySelect = d3.select("#primaryMakeSelect");
+  const secondarySelect = d3.select("#secondaryMakeSelect");
+  const compareLayout = d3.select("#crownCompareLayout");
+  const secondaryPanel = d3.select("#crownPanelSecondary");
+
+  const metricEntries = Object.entries(CROWN_METRICS).map(([key, config]) => ({
+    key,
+    ...config
+  }));
+
+  const metricButtons = metricControls
+    .selectAll("button")
+    .data(metricEntries)
+    .join("button")
+    .attr("type", "button")
+    .attr("class", "metric-pill")
+    .text(d => d.label)
+    .on("click", (_, d) => {
+      store.setCrownMetric(d.key);
+    });
+
+  const legendItems = legend
+    .selectAll("button")
+    .data(store.getState().allFuelTypes)
+    .join("button")
+    .attr("type", "button")
+    .attr("class", "legend-item")
+    .on("click", (_, fuelType) => {
+      store.toggleFuelType(fuelType);
+    });
+
+  legendItems
+    .append("span")
+    .attr("class", "legend-swatch")
+    .style("background", fuelType => FUEL_TYPE_COLORS[fuelType] ?? "#4c6073");
+
+  legendItems
+    .append("span")
+    .attr("class", "legend-label")
+    .text(fuelType => FUEL_TYPE_LABELS[fuelType] ?? fuelType);
+
+  const makeOptions = store.getState().manufacturerStats
+    .map(d => d.make)
+    .slice()
+    .sort(d3.ascending);
+
+  primarySelect
+    .selectAll("option")
+    .data(makeOptions)
+    .join("option")
+    .attr("value", d => d)
+    .text(d => d);
+
+  secondarySelect
+    .selectAll("option")
+    .data(["", ...makeOptions])
+    .join("option")
+    .attr("value", d => d)
+    .text(d => (d ? d : "None"));
+
+  primarySelect.on("change", function() {
+    store.setPrimaryMake(this.value);
+  });
+
+  secondarySelect.on("change", function() {
+    store.setSecondaryMake(this.value || null);
+  });
+
+  createCrownPanel(store, {
+    slotKey: "primary",
+    panelSelector: "#crownPanelPrimary",
+    titleSelector: "#crownPanelTitlePrimary",
+    subtitleSelector: "#crownSubtitlePrimary",
+    svgSelector: "#crownPrimary",
+    pinnedSelector: "#crownPinnedPrimary"
+  });
+
+  createCrownPanel(store, {
+    slotKey: "secondary",
+    panelSelector: "#crownPanelSecondary",
+    titleSelector: "#crownPanelTitleSecondary",
+    subtitleSelector: "#crownSubtitleSecondary",
+    svgSelector: "#crownSecondary",
+    pinnedSelector: "#crownPinnedSecondary"
+  });
+
+  store.subscribe(state => {
+    metricButtons.classed("is-active", d => d.key === state.crownMetric);
+    legendItems.classed("inactive", fuelType => !state.activeFuelTypes.includes(fuelType));
+
+    primarySelect.property("value", state.primaryMake || "");
+    secondarySelect.property("value", state.secondaryMake || "");
+
+    compareLayout.classed("has-compare", Boolean(state.secondaryMake));
+    secondaryPanel.classed("is-hidden", !state.secondaryMake);
   });
 }
