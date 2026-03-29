@@ -1,6 +1,6 @@
 import { FUEL_TYPE_LABELS } from "./data.js";
 
-// ── Class grouping ────────────────────────────────────────────────────────────
+// Class grouping
 export const CLASS_GROUPS = {
   compact:       { label: "Compact",       classes: ["COMPACT", "MINICOMPACT", "SUBCOMPACT"] },
   midsize:       { label: "Mid-size",      classes: ["MID-SIZE"] },
@@ -17,13 +17,13 @@ const GROUP_COLORS = [
   "#11736a", "#c65d2e", "#1d79a9", "#cf8a21", "#9b4dca", "#68993b", "#e63962", "#4c6073"
 ];
 
-// Fuel-type ordinal rank (low → high emission risk)
+// Fuel-type ordinal rank (low -> high emission risk)
 const FUEL_RANK = { E: 1, N: 2, X: 3, Z: 4, D: 5 };
 
 function getGears(transmission) {
   if (!transmission) return 0;
   const last = transmission.slice(-1);
-  if (last === "V") return 1;  // CVT → treat as 1 effective "gear"
+  if (last === "V") return 1;  // CVT treated as 1 effective gear
   const n = parseInt(last, 10);
   return isNaN(n) ? 0 : (transmission.endsWith("10") ? 10 : n);
 }
@@ -50,7 +50,7 @@ export function buildClassStats(fullData) {
   return stats;
 }
 
-// ── Spider axes ───────────────────────────────────────────────────────────────
+// Spider axes
 const AXES = [
   { key: "engine",    label: "Engine Size",      unit: "L",       domain: [1, 8] },
   { key: "cylinders", label: "Cylinders",         unit: "",        domain: [2, 16] },
@@ -75,9 +75,8 @@ function polygonPath(values, scale) {
   return pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0]},${p[1]}`).join(" ") + "Z";
 }
 
-// ── Car SVG icons ─────────────────────────────────────────────────────────────
+// Car SVG icons
 function carIcon(groupKey) {
-  // Each returns a small inline SVG path string (viewBox 0 0 48 32)
   const icons = {
     compact:      `<rect x="4" y="14" width="40" height="12" rx="3" fill="currentColor"/>
                    <path d="M10 14 L14 6 L34 6 L38 14Z" fill="currentColor"/>
@@ -117,7 +116,7 @@ function carIcon(groupKey) {
   return icons[groupKey] ?? icons.compact;
 }
 
-// ── Main renderer ─────────────────────────────────────────────────────────────
+// Builds the spider chart 
 export function createSpider(store, classStats) {
   const container = d3.select("#spiderContainer");
   container.selectAll("*").remove();
@@ -136,7 +135,6 @@ export function createSpider(store, classStats) {
 
   const g = svg.append("g").attr("transform", `translate(${cx},${cy})`);
 
-  // ── Grid rings ──
   const levels = 5;
   const rScale = d3.scaleLinear().domain([0, 1]).range([0, radius]);
 
@@ -150,7 +148,6 @@ export function createSpider(store, classStats) {
       .attr("stroke-width", 1);
   }
 
-  // ── Axis lines + labels ──
   AXES.forEach((axis, i) => {
     const angle = i * angleSlice;
     const [x2, y2] = radialPoint(angle, radius);
@@ -183,9 +180,7 @@ export function createSpider(store, classStats) {
         .text(`(${axis.unit})`);
     }
 
-    // Tick values at outermost ring
     if (axis.tickFormat) {
-      // fuel-type axis: label each ring
       for (let l = 1; l <= levels; l++) {
         const r = (radius / levels) * l;
         const val = axis.domain[0] + ((axis.domain[1] - axis.domain[0]) / levels) * l;
@@ -200,7 +195,6 @@ export function createSpider(store, classStats) {
     }
   });
 
-  // ── Polygon for each active group ──
   const state = store.getState();
   const activeGroups = state.activeVehicleClasses || [];
 
@@ -213,7 +207,7 @@ export function createSpider(store, classStats) {
     const values = AXES.map(axis => {
       const [lo, hi] = axis.domain;
       const v = Math.min(Math.max(stats[axis.key], lo), hi);
-      return (v - lo) / (hi - lo); // normalise 0-1
+      return (v - lo) / (hi - lo);
     });
 
     const path = polygonPath(values, rScale);
@@ -226,7 +220,6 @@ export function createSpider(store, classStats) {
       .attr("stroke-width", 2.2)
       .attr("stroke-linejoin", "round");
 
-    // Vertex dots + tooltips
     values.forEach((v, i) => {
       const r = rScale(v);
       const [px, py] = radialPoint(i * angleSlice, r);
@@ -258,7 +251,6 @@ export function createSpider(store, classStats) {
     });
   });
 
-  // ── Legend ──
   if (activeGroups.length > 1) {
     const legendG = svg.append("g").attr("transform", `translate(${cx - (activeGroups.length * 60) / 2}, ${svgH - 18})`);
     activeGroups.forEach((key, i) => {
@@ -269,7 +261,6 @@ export function createSpider(store, classStats) {
     });
   }
 
-  // ── Empty state ──
   if (activeGroups.length === 0) {
     g.append("text")
       .attr("text-anchor", "middle")

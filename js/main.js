@@ -40,6 +40,10 @@ d3.csv("data.csv")
       store.appendCurrentPoints(sampleData(fullData, 10));
     });
 
+    d3.select("#showAllCars").on("click", () => {
+      store.setCurrentPoints(fullData.map(createPointInstance));
+    });
+
     d3.select("#resetButton").on("click", () => {
       store.setCurrentPoints([]);
       store.resetInteractions();
