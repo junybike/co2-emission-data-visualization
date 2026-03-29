@@ -81,7 +81,7 @@
 
     .control-row {
       display: grid;
-      grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) auto;
+      grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
       gap: 18px;
       margin-bottom: 20px;
       align-items: start;
@@ -95,7 +95,12 @@
       align-items: center;
       justify-content: flex-start;
       justify-self: start;
-      min-width: 360px;
+      min-width: 0;
+      width: fit-content;
+    }
+
+    .button-bar--scatter {
+      margin-bottom: 14px;
     }
 
     button {
@@ -641,12 +646,6 @@
         <div id="classButtons"></div>
         <div id="spiderContainer"></div>
       </div>
-
-      <div class="button-bar">
-        <button id="resetButton">Reset</button>
-        <button id="random10samples">Sample 10 Cars</button>
-        <button id="showAllCars">Show All Cars</button>
-      </div>
     </div>
 
     <div class="viz-grid">
@@ -659,6 +658,13 @@
             </p>
           </div>
         </div>
+
+        <div class="button-bar button-bar--scatter">
+          <button id="resetButton">Reset</button>
+          <button id="random10samples">Sample 10 Cars</button>
+          <button id="showAllCars">Show All Cars</button>
+        </div>
+
         <div class="chart-frame chart-frame--overview">
           <svg id="scatter" width="920" height="660" viewBox="0 0 920 660" preserveAspectRatio="xMidYMid meet"></svg>
         </div>
