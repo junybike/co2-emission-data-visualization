@@ -76,7 +76,6 @@ export function createScatter(store) {
     const { CLASS_GROUPS } = window._spiderClassGroups || {};
     const activeGroups = state.activeVehicleClasses || [];
 
-    // Build the set of raw vehicleclass strings that are allowed
     let allowedClasses = null;
     if (CLASS_GROUPS && activeGroups.length > 0) {
       allowedClasses = new Set();
@@ -141,11 +140,17 @@ export function createScatter(store) {
         .attr("text-anchor", "middle")
         .attr("fill", "#94a3b8")
         .attr("font-size", 13)
-        .text("Click any future point to set the active make for the crown.");
+        .text("Click any future point to set the primary make for the crown.");
     }
 
     const brushedMakes = new Set(state.brushedMakes);
     const activeFuelTypes = new Set(state.activeFuelTypes);
+    const focusedCars = [
+      state.hoveredCars?.primary,
+      state.hoveredCars?.secondary,
+      state.pinnedCars?.primary,
+      state.pinnedCars?.secondary
+    ].filter(Boolean);
 
     const circles = pointsLayer
       .selectAll("circle")
@@ -172,7 +177,7 @@ export function createScatter(store) {
                       Fuel: ${FUEL_TYPE_LABELS[d.fueltype] ?? d.fueltype}<br/>
                       Engine: ${d3.format(".1f")(d.engine)} L<br/>
                       CO2: ${d.co2} g/km<br/>
-                      Click to inspect ${d.make} in the crown`
+                      Click to set ${d.make} as the primary crown make`
                     );
 
                   d3.select(this).attr("stroke-width", 2.2);
@@ -187,11 +192,17 @@ export function createScatter(store) {
                   const latestState = store.getState();
                   const point = d3.select(this).datum();
 
-                  d3.select(this).attr("stroke-width", point.make === latestState.activeMake ? 1.6 : 1.1);
+                  if (point.make === latestState.primaryMake) {
+                    d3.select(this).attr("stroke-width", 1.8);
+                  } else if (point.make === latestState.secondaryMake) {
+                    d3.select(this).attr("stroke-width", 1.5);
+                  } else {
+                    d3.select(this).attr("stroke-width", 1.1);
+                  }
                 })
                 .on("click", (event, d) => {
                   event.stopPropagation();
-                  store.setActiveMake(d.make);
+                  store.setPrimaryMake(d.make);
                 })
             )
             .call(selection =>
@@ -208,7 +219,7 @@ export function createScatter(store) {
       .attr("r", d => Math.max(4, d.engine * 1.7))
       .attr("fill", d => {
         const color = d3.color(FUEL_TYPE_COLORS[d.fueltype] ?? "#4c6073");
-        const isHovered = matchesFocus(d, state.hoveredCar);
+        const isHovered = focusedCars.some(car => matchesFocus(d, car));
 
         if (!color) {
           return "#4c6073";
@@ -217,29 +228,32 @@ export function createScatter(store) {
         return isHovered ? color.brighter(0.5).formatHex() : color.formatHex();
       })
       .attr("stroke", d => {
-        if (matchesFocus(d, state.pinnedCar)) return "#9a3412";
-        if (matchesFocus(d, state.hoveredCar)) return "#f97316";
-        if (d.make === state.activeMake) return "#0f172a";
+        if (matchesFocus(d, state.pinnedCars?.primary) || matchesFocus(d, state.pinnedCars?.secondary)) return "#9a3412";
+        if (matchesFocus(d, state.hoveredCars?.primary) || matchesFocus(d, state.hoveredCars?.secondary)) return "#f97316";
+        if (d.make === state.primaryMake) return "#0f172a";
+        if (d.make === state.secondaryMake) return "#c65d2e";
         return "white";
       })
       .attr("stroke-width", d => {
-        if (matchesFocus(d, state.pinnedCar)) return 2.8;
-        if (matchesFocus(d, state.hoveredCar)) return 2.2;
-        if (d.make === state.activeMake) return 1.6;
+        if (matchesFocus(d, state.pinnedCars?.primary) || matchesFocus(d, state.pinnedCars?.secondary)) return 2.8;
+        if (matchesFocus(d, state.hoveredCars?.primary) || matchesFocus(d, state.hoveredCars?.secondary)) return 2.2;
+        if (d.make === state.primaryMake) return 1.8;
+        if (d.make === state.secondaryMake) return 1.5;
         return 1.1;
       })
       .attr("opacity", d => {
-        const highlighted = matchesFocus(d, state.pinnedCar) || matchesFocus(d, state.hoveredCar);
+        const highlighted = focusedCars.some(car => matchesFocus(d, car));
 
         if (highlighted) return 1;
         if (!activeFuelTypes.has(d.fueltype)) return 0.12;
         if (brushedMakes.size > 0 && !brushedMakes.has(d.make)) return 0.15;
-        if (d.make === state.activeMake) return 0.95;
+        if (d.make === state.primaryMake) return 0.95;
+        if (d.make === state.secondaryMake) return 0.88;
         return 0.75;
       });
 
     circles
-      .filter(d => matchesFocus(d, state.hoveredCar) || matchesFocus(d, state.pinnedCar))
+      .filter(d => focusedCars.some(car => matchesFocus(d, car)))
       .raise();
   });
 }
