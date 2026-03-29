@@ -1,5 +1,20 @@
 import { getFuelTypes, getMostCommonMake } from "./data.js";
 
+function createEmptyFocusState() {
+  return {
+    hoveredCar: null,
+    pinnedCar: null
+  };
+}
+
+function getSlotKey(slotOrCar, maybeCar) {
+  return maybeCar === undefined ? "primary" : slotOrCar;
+}
+
+function getCarArg(slotOrCar, maybeCar) {
+  return maybeCar === undefined ? slotOrCar : maybeCar;
+}
+
 export function createAppState(fullData, manufacturerStats) {
   const defaultMake = getMostCommonMake(fullData);
   const allFuelTypes = getFuelTypes(fullData);
@@ -8,25 +23,45 @@ export function createAppState(fullData, manufacturerStats) {
     fullData,
     manufacturerStats,
     currentPoints: [],
-    activeMake: defaultMake,
+    primaryMake: defaultMake,
+    secondaryMake: null,
     brushedMakes: [],
     crownMetric: "gap",
     activeFuelTypes: [...allFuelTypes],
-    hoveredCar: null,
-    pinnedCar: null,
+    crownFocus: {
+      primary: createEmptyFocusState(),
+      secondary: createEmptyFocusState()
+    },
     activeVehicleClasses: []
   };
 
   const dispatch = d3.dispatch("change");
   let subscriptionCount = 0;
 
+  function selectedMakes() {
+    return [state.primaryMake, state.secondaryMake].filter(Boolean);
+  }
+
   function snapshot() {
     return {
       ...state,
+      activeMake: state.primaryMake,
+      selectedMakes: selectedMakes(),
+      hoveredCar: state.crownFocus.primary.hoveredCar,
+      pinnedCar: state.crownFocus.primary.pinnedCar,
+      hoveredCars: {
+        primary: state.crownFocus.primary.hoveredCar,
+        secondary: state.crownFocus.secondary.hoveredCar
+      },
+      pinnedCars: {
+        primary: state.crownFocus.primary.pinnedCar,
+        secondary: state.crownFocus.secondary.pinnedCar
+      },
       brushedMakes: [...state.brushedMakes],
       activeFuelTypes: [...state.activeFuelTypes],
       activeVehicleClasses: [...state.activeVehicleClasses],
-      allFuelTypes: [...allFuelTypes]
+      allFuelTypes: [...allFuelTypes],
+      hasComparison: Boolean(state.secondaryMake)
     };
   }
 
@@ -56,18 +91,44 @@ export function createAppState(fullData, manufacturerStats) {
     emit("currentPoints");
   }
 
-  function setActiveMake(make) {
+  function syncSlotFocus(slotKey) {
+    const activeMake = slotKey === "primary" ? state.primaryMake : state.secondaryMake;
+    const slotFocus = state.crownFocus[slotKey];
+
+    slotFocus.hoveredCar = null;
+
+    if (!activeMake || (slotFocus.pinnedCar && slotFocus.pinnedCar.make !== activeMake)) {
+      slotFocus.pinnedCar = null;
+    }
+  }
+
+  function setPrimaryMake(make) {
     const nextMake = make || defaultMake;
-    const changed = state.activeMake !== nextMake;
+    const changed = state.primaryMake !== nextMake;
 
-    state.activeMake = nextMake;
-    state.hoveredCar = null;
+    state.primaryMake = nextMake;
 
-    if (state.pinnedCar && state.pinnedCar.make !== nextMake) {
-      state.pinnedCar = null;
+    if (state.secondaryMake === nextMake) {
+      state.secondaryMake = null;
+      syncSlotFocus("secondary");
     }
 
-    emit(changed ? "activeMake" : "activeMakeRefresh");
+    syncSlotFocus("primary");
+    emit(changed ? "primaryMake" : "primaryMakeRefresh");
+  }
+
+  function setSecondaryMake(make) {
+    const normalized = make && make !== state.primaryMake ? make : null;
+    const changed = state.secondaryMake !== normalized;
+
+    state.secondaryMake = normalized;
+    syncSlotFocus("secondary");
+
+    emit(changed ? "secondaryMake" : "secondaryMakeRefresh");
+  }
+
+  function setActiveMake(make) {
+    setPrimaryMake(make);
   }
 
   function setBrushedMakes(makes) {
@@ -75,31 +136,49 @@ export function createAppState(fullData, manufacturerStats) {
     emit("brushedMakes");
   }
 
-  function setHoveredCar(car) {
-    if (state.hoveredCar?.id === car?.id) {
+  function setHoveredCar(slotOrCar, maybeCar) {
+    const slotKey = getSlotKey(slotOrCar, maybeCar);
+    const car = getCarArg(slotOrCar, maybeCar);
+    const slotFocus = state.crownFocus[slotKey];
+
+    if (!slotFocus) {
       return;
     }
 
-    state.hoveredCar = car || null;
+    if (slotFocus.hoveredCar?.id === car?.id) {
+      return;
+    }
+
+    slotFocus.hoveredCar = car || null;
     emit("hoveredCar");
   }
 
-  function togglePinnedCar(car) {
-    if (state.pinnedCar?.id === car?.id) {
-      state.pinnedCar = null;
+  function togglePinnedCar(slotOrCar, maybeCar) {
+    const slotKey = getSlotKey(slotOrCar, maybeCar);
+    const car = getCarArg(slotOrCar, maybeCar);
+    const slotFocus = state.crownFocus[slotKey];
+
+    if (!slotFocus) {
+      return;
+    }
+
+    if (slotFocus.pinnedCar?.id === car?.id) {
+      slotFocus.pinnedCar = null;
     } else {
-      state.pinnedCar = car || null;
+      slotFocus.pinnedCar = car || null;
     }
 
     emit("pinnedCar");
   }
 
-  function clearPinnedCar() {
-    if (!state.pinnedCar) {
+  function clearPinnedCar(slotKey = "primary") {
+    const slotFocus = state.crownFocus[slotKey];
+
+    if (!slotFocus || !slotFocus.pinnedCar) {
       return;
     }
 
-    state.pinnedCar = null;
+    slotFocus.pinnedCar = null;
     emit("pinnedCar");
   }
 
@@ -142,12 +221,15 @@ export function createAppState(fullData, manufacturerStats) {
   }
 
   function resetInteractions() {
-    state.activeMake = defaultMake;
+    state.primaryMake = defaultMake;
+    state.secondaryMake = null;
     state.brushedMakes = [];
     state.crownMetric = "gap";
     state.activeFuelTypes = [...allFuelTypes];
-    state.hoveredCar = null;
-    state.pinnedCar = null;
+    state.crownFocus = {
+      primary: createEmptyFocusState(),
+      secondary: createEmptyFocusState()
+    };
     state.activeVehicleClasses = [];
 
     emit("resetInteractions");
@@ -158,6 +240,8 @@ export function createAppState(fullData, manufacturerStats) {
     getState: snapshot,
     setCurrentPoints,
     appendCurrentPoints,
+    setPrimaryMake,
+    setSecondaryMake,
     setActiveMake,
     setBrushedMakes,
     setHoveredCar,
