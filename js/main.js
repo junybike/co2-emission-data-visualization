@@ -24,14 +24,12 @@ d3.csv("data.csv")
     const store = createAppState(fullData, manufacturerStats);
 
     const classStats = buildClassStats(fullData);
-    // Make CLASS_GROUPS available to scatter filter via global (avoids circular import)
     window._spiderClassGroups = { CLASS_GROUPS };
 
     createScatter(store);
     createBarchart(store);
     createCrown(store);
 
-    // Build class buttons and spider chart
     buildClassButtons(store, classStats);
 
     store.setCurrentPoints(sampleData(fullData, 10));
@@ -123,7 +121,6 @@ d3.csv("data.csv")
               .style("--class-color", color);
           });
 
-        // Re-render spider
         createSpider(store, classStats);
       });
     }
