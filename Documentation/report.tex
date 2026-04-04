@@ -1,0 +1,40 @@
+\documentclass[12pt, letterpaper]{article}
+\usepackage[bottom=2.0cm, right=2.0cm, left=2.0cm, top=2.0cm]{geometry}
+\usepackage{graphicx} 
+\usepackage{hyperref}
+\usepackage{tikz}
+\usepackage{caption}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\hypersetup{pdfborder=0 0 0}
+\usepackage{tikz}
+\usepackage{caption}
+\usepackage{xcolor}
+\definecolor{darkred}{rgb}{0.8, 0, 0}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue,
+    citecolor=black,
+    pdfborder={0 0 0}  % Adds a border around links; change to {0 0 0} for no border
+}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amssymb}
+\usepackage{tocloft}
+
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}} % for dots in table of contents
+
+% setting graphics path to imgages
+\graphicspath{{./images/}}
+
+\begin{document}
+
+    \include{pages/titlepage}
+
+    \tableofcontents
+
+    % \include{...}
+
+\end{document}
