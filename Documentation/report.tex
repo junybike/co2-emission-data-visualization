@@ -1,40 +1,363 @@
-\documentclass[12pt, letterpaper]{article}
-\usepackage[bottom=2.0cm, right=2.0cm, left=2.0cm, top=2.0cm]{geometry}
-\usepackage{graphicx} 
-\usepackage{hyperref}
-\usepackage{tikz}
-\usepackage{caption}
-\usepackage{amsmath}
-\usepackage{hyperref}
-\hypersetup{pdfborder=0 0 0}
-\usepackage{tikz}
-\usepackage{caption}
-\usepackage{xcolor}
-\definecolor{darkred}{rgb}{0.8, 0, 0}
+\documentclass[12pt,letterpaper]{article}
 
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{microtype}
+\usepackage{parskip}
+
+\definecolor{darkred}{rgb}{0.8, 0, 0}
 \hypersetup{
     colorlinks=true,
     linkcolor=black,
     urlcolor=blue,
-    citecolor=black,
-    pdfborder={0 0 0}  % Adds a border around links; change to {0 0 0} for no border
+    citecolor=black
 }
 
-\usepackage[utf8]{inputenc}
-\usepackage{amsmath, amssymb}
-\usepackage{tocloft}
-
-\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}} % for dots in table of contents
-
-% setting graphics path to imgages
-\graphicspath{{./images/}}
+\graphicspath{{images/}}
+\setlength{\parindent}{0pt}
+\setlist[itemize]{leftmargin=*, itemsep=0.25em, topsep=0.4em}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 
 \begin{document}
 
-    \include{pages/titlepage}
+\hypersetup{pageanchor=false}
+\pagenumbering{gobble}
+\input{pages/titlepage}
 
-    \tableofcontents
+\tableofcontents
+\clearpage
+\hypersetup{pageanchor=true}
+\pagenumbering{arabic}
+\setcounter{page}{1}
 
-    % \include{...}
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+Buying a car rarely begins with a scatterplot. It usually begins with a practical question: what kind of vehicle fits everyday life without quietly locking its owner into unnecessary emissions and fuel use? Our project, \emph{CO2 Emission Explorer}, turns a public vehicle emissions dataset into a coordinated D3.js system that helps answer that question in stages. The interface combines a build-a-car query panel, a vehicle-class radar chart, a sampled vehicle scatterplot, a make-level overview chart, a custom radial \emph{CO2 Crown}, and pinned detail cards. Together, these views support movement from broad comparison to specific inspection: first comparing classes, then scanning makes, then examining individual vehicles inside a manufacturer. The system uses a shared application state so selections, filters, and focus changes propagate across views instead of staying local to a single chart. Its central contribution is the CO2 Crown, an original ranked radial view that arranges one make's vehicles from lower to higher CO2 along an arc while using spoke length, color, and size to expose secondary tradeoffs. The final result is a polished exploratory tool for reasoning about fuel consumption, emissions, and vehicle design tradeoffs in a way that is both analytically useful and grounded in a public-interest problem.
+
+\section{Introduction}
+Imagine a family replacing an aging car. One parent has a long weekday commute, another cares about cargo room for weekend trips, and both want to avoid treating emissions as an afterthought. A raw CSV does not help much here. Even if the numbers are public, they are still buried in rows, abbreviations, and disconnected variables such as engine size, cylinders, fuel type, fuel consumption, and CO2 output. The real challenge is not access to data; it is making tradeoffs visible enough to support a decision.
+
+That is the problem this project addresses. \emph{CO2 Emission Explorer} is a D3.js interactive visualization system built around a public vehicle emissions table adapted from the Kaggle dataset \emph{CO2 Emission by Vehicles} by Debajyoti Podder and included in the repository as \texttt{data.csv}; the repository also contains the original attached files in \texttt{Original\_Dataset} for reference \cite{kaggledataset,dataset,originalcsv,datadescription}. The goal is not to declare a single ``best'' car. Instead, the system helps a user move from broad questions to narrower ones:
+
+\begin{itemize}
+\item What kinds of vehicle classes are generally heavier emitters?
+\item Which makes (brands) produce many variants, and which of those variants are relatively efficient?
+\item If I want a vehicle with certain basic specifications, what real cars in the dataset are nearby?
+\item Within one manufacturer, where do efficient and inefficient models sit relative to one another?
+\end{itemize}
+
+Vehicle emissions data matters because consumer choices accumulate into a public problem. Passenger vehicles contribute to fuel demand, local air pollution, and greenhouse gas emissions. A visualization project in this area fits ``data for common good'' because it turns technically available but cognitively difficult information into something a non-expert can actually reason about. In our framing, the family's search for a practical car provides the narrative thread: they begin with classes, shift to makes, and finally inspect specific vehicles. The report follows that same path.
+
+\section{Data Choice and Motivation}
+The dataset contains 7,385 rows and 12 raw columns. Each row describes a vehicle entry with a make, model, class, engine size, cylinder count, transmission code, fuel type, multiple fuel-consumption measures, and CO2 emissions in grams per kilometer. The table spans 42 makes, 2,053 distinct model names, 16 raw vehicle classes, and 5 fuel-type codes. Numerically, the data ranges from 0.9\,L to 8.4\,L engines, 4.1 to 26.1\,L/100\,km combined fuel consumption, and 96 to 522\,g/km CO2 emissions.
+
+This was a strong project dataset for three reasons. First, it is societally meaningful. Vehicle emissions are an everyday policy and consumer issue rather than a private or entertainment-oriented dataset. Second, it contains natural tradeoffs instead of a single obvious ranking. A vehicle can have a larger engine but still sit in a relatively efficient class; a make can offer both hybrids and high-emission performance models; a fuel type can change the shape of those tradeoffs again. Third, the table supports several different levels of analysis, from the individual vehicle to the aggregated make or class.
+
+The original source used for this project is the Kaggle dataset page \emph{CO2 Emission by Vehicles}, which describes the collection as a 7,385-row, 12-column vehicle emissions table and states that it was compiled from Canada's government open-data records \cite{kaggledataset}. The repository includes the original file in \texttt{Original\_Dataset/CO2 Emissions\_Canada.csv} as well as \texttt{Original\_Dataset/Data Description.csv}, which documents the dataset's abbreviations, fuel codes, transmission codes, and measurement units \cite{originalcsv,datadescription}. The implemented \texttt{data.csv} is a normalized version of the same table with lowercase, machine-friendly column names, which made the D3 code cleaner without changing the underlying rows \cite{dataset}.
+
+Table~\ref{tab:variables} summarizes the variables that mattered most in the design.
+
+\begin{table}[H]
+\centering
+\caption{Core variables used by the final system.}
+\label{tab:variables}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.28\linewidth}YY}
+\toprule
+\textbf{Field(s)} & \textbf{Meaning} & \textbf{Role in the interface} \\
+\midrule
+\texttt{make}, \texttt{model} & Manufacturer and vehicle name & Brand-level comparison in the overview and crown; labeling pinned vehicles \\
+\texttt{vehicleclass} & Raw class labels such as \texttt{SUV - SMALL} or \texttt{COMPACT} & Grouped into broader class buttons and summarized in the radar chart \\
+\texttt{engine\_size\_l}, \texttt{cylinders} & Basic powertrain size indicators & Build-a-car matching, scatter point size, class profiling, crown spoke metric option \\
+\texttt{transmission} & Transmission code & Parsed into an approximate gear count for the class radar chart; shown in pinned details \\
+\texttt{fueltype} & Encoded fuel family & Consistent color encoding and coordinated fuel filtering \\
+{\footnotesize \shortstack[l]{\texttt{fuel\_consumption\_city\_l\_100\_km} \\ \texttt{fuel\_consumption\_hwy\_l\_100\_km} \\ \texttt{fuel\_consumption\_comb\_l\_100\_km}}} & Fuel consumption measures & Scatter axes, crown spoke metric, build-a-car matching, derived city-highway gap \\
+{\footnotesize \shortstack[l]{\texttt{fuel\_consumption\_comb\_mpg}}} & Alternative efficiency unit & Present in the file but not central to the final views \\
+\texttt{co2\_emissions\_g\_km} & Tailpipe CO2 emissions & Main analytical target; scatter y-axis, crown ranking, make average line \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The data also has limitations that shaped the design. It does not include price, sales volume, ownership cost, passenger capacity, safety, or lifecycle manufacturing emissions. That means the tool can support emissions reasoning, but it cannot claim to solve the entire car-buying problem. The number of rows per make should also be read as \emph{model entries in the dataset}, not market popularity.
+
+\section{Data Understanding and Sketchable Data Subset}
+At the start of the project, the full dataset was too wide and too detailed to sketch directly. Good sketches need a manageable subset of variables and a smaller number of comparison tasks. The sketchable subset for this project was therefore:
+
+\begin{itemize}
+\item make and model,
+\item vehicle class,
+\item fuel type,
+\item engine size and cylinders,
+\item combined fuel consumption,
+\item CO2 emissions,
+\item city minus highway fuel-consumption gap.
+\end{itemize}
+
+This subset is not arbitrary; it is almost exactly the set of fields that survived into the final system. The reason is practical. These variables are the ones a user can plausibly think about before committing to a brand: ``I probably need an SUV or a compact car,'' ``I want reasonable fuel use,'' ``I do not want the highest-emission option,'' and ``I still want enough power for my needs.'' That makes them sketchable both visually and conceptually.
+
+Table~\ref{tab:subsetsample} shows a few example rows from the visualization-ready table. This is useful because the reader can immediately see the mix of categorical and quantitative fields that shaped the sketches. The fuel-type codes preserve the original dataset notation: \texttt{X} for regular gasoline, \texttt{Z} for premium gasoline, \texttt{D} for diesel, \texttt{E} for ethanol (E85), and \texttt{N} for natural gas \cite{datadescription}.
+
+\begin{table}[H]
+\centering
+\caption{Example rows from the sketchable subset used in the visualization.}
+\label{tab:subsetsample}
+\scriptsize
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.12\linewidth}>{\raggedright\arraybackslash}p{0.22\linewidth}>{\raggedright\arraybackslash}p{0.17\linewidth}ccccc}
+\toprule
+\textbf{Make} & \textbf{Model} & \textbf{Class} & \textbf{Engine} & \textbf{Cyl.} & \textbf{Fuel} & \textbf{Comb.} & \textbf{CO2} \\
+ &  &  & \textbf{(L)} &  & \textbf{code} & \textbf{(L/100 km)} & \textbf{(g/km)} \\
+\midrule
+ACURA & ILX & COMPACT & 2.0 & 4 & Z & 8.5 & 196 \\
+ACURA & ILX HYBRID & COMPACT & 1.5 & 4 & Z & 5.9 & 136 \\
+AUDI & A6 QUATTRO TDI (modified) & MID-SIZE & 3.0 & 6 & D & 8.1 & 217 \\
+BUICK & LACROSSE & MID-SIZE & 3.6 & 6 & E & 15.6 & 250 \\
+CHEVROLET & IMPALA DUAL FUEL & MID-SIZE & 3.6 & 6 & N & 12.7 & 213 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The implementation further simplifies the raw data into structures that are easier to reason about. The 16 raw classes are collapsed into 8 broader groups such as compact, mid-size, SUV, van, and pickup. Manufacturer statistics are aggregated into count and average CO2. The code also derives a \texttt{gap} metric, defined as city fuel consumption minus highway fuel consumption, to capture how much a vehicle's efficiency changes between driving conditions. This becomes especially useful in the CO2 Crown because it distinguishes vehicles that may have similar overall CO2 but very different city-versus-highway behavior.
+
+The main dataset-supported tasks were clear early on:
+
+\begin{itemize}
+\item compare vehicle classes and their typical specifications,
+\item compare makes by variety and average emissions,
+\item inspect the relationship between combined fuel use and CO2,
+\item locate a real vehicle close to a desired specification,
+\item inspect within-make variation rather than only make averages,
+\item compare one make against another without losing detail.
+\end{itemize}
+
+\section{Design Goals and User Tasks}
+The family scenario helped keep the design focused. A real user making a car decision does not begin by asking for a highly abstract visualization; they ask a sequence of grounded questions. Those questions became our design goals.
+
+\begin{itemize}
+\item Support a move from coarse comparison to detailed inspection.
+\item Keep emissions central without hiding the practical variables that produce them.
+\item Let users compare across makes and within a make.
+\item Use interactions that change analytical context, not just decorate the page.
+\item Keep the interface readable even when the full dataset is shown.
+\end{itemize}
+
+From those goals, we defined the following concrete tasks:
+
+\begin{itemize}
+\item Compare broader vehicle classes such as compact cars and SUVs.
+\item Build a rough desired car profile and retrieve a nearby real match.
+\item See where sampled or full-set vehicles sit in the fuel-versus-CO2 space.
+\item Identify makes with many variants and interpret their average CO2.
+\item Pick a make from either the scatter or the overview and inspect its internal spread.
+\item Filter by fuel type to see how gasoline, diesel, ethanol, or natural gas vehicles affect the picture.
+\item Compare two makes side by side without collapsing them into a single summary statistic.
+\item Pin a specific vehicle and keep its details visible while continuing to explore.
+\end{itemize}
+
+\section{Design Process: From Sketches to Final Direction}
+The final interface works because it mirrors the order in which a user's questions usually narrow. Early sketches likely could not afford to start with a dense all-in-one view because the dataset supports several levels of reasoning. A better design was to stage the analysis.
+
+The first stage is class thinking: ``Should we even be looking at compacts, SUVs, or pickups?'' That led naturally to the class explorer and its radar chart. The second stage is distribution thinking: ``What does the larger field of vehicles look like, and where do some candidate cars land?'' That produced the scatterplot. The third stage is brand thinking: ``Which manufacturers are worth examining more closely?'' That became the make overview. Only after those stages does it make sense to ask the most detailed question: ``Inside this manufacturer, which vehicles are relatively clean and which are not?'' The answer to that question motivated the CO2 Crown.
+
+This progression mattered because several alternatives are easier to draw than to use. A standard bar chart of make averages hides within-make variation. A conventional scatterplot of all vehicles within a make can show the data, but it does not naturally emphasize ranked progression from cleaner to dirtier entries. A table supports exact lookup, but not pattern finding. The chosen direction works better because each view carries the user a little further into specificity without forcing them to abandon earlier context.
+
+The CO2 Crown emerged as the strongest final direction because it solved a real gap in the design. The project already had views for classes, global distributions, and make aggregates. What it lacked was a memorable, compact way to examine one make's internal ordering while still leaving room for comparison, focus, and detail. The crown answered that need.
+
+\section{System Overview}
+Figure~\ref{fig:overall} shows the final interface. The layout is intentionally top-down. The first row contains the input-oriented views: Build a Car on the left and Vehicle Class Explorer on the right. The second row contains the global views: a scatterplot for individual vehicles and a make overview for manufacturer-level comparison. The bottom section is devoted to the CO2 Crown, where the user studies one or two makes in detail.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth,height=0.9\textheight,keepaspectratio]{overall-interface.png}
+\caption{The full interface. The page progresses from rough specification and class comparison at the top to make-level and within-make analysis below.}
+\label{fig:overall}
+\end{figure}
+
+This layout supports the report's narrative thread. Our family starts by imagining what kind of vehicle they need, then sees how those choices sit in the larger emissions space, then narrows to specific makes, and finally examines individual models inside those makes. The system is therefore not just a collection of charts. It is a path through the decision.
+
+\section{Visualization Views}
+
+\subsection{Build a Car and Vehicle Class Explorer}
+The Build a Car panel and Vehicle Class Explorer work as a pair because both operate before the user has fully committed to a brand. Figure~\ref{fig:buildclass} shows this part of the interface.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{build-class-explorer.png}
+\caption{The Build a Car panel and Vehicle Class Explorer. Here, compact and SUV classes are active, and a user-defined compact specification retrieves a nearby real car from the dataset.}
+\label{fig:buildclass}
+\end{figure}
+
+Build a Car uses sliders for engine size, cylinders, and combined fuel consumption, plus a class selector. These are not merely form widgets. Pressing \emph{Build!} runs a nearest-match query against the dataset and inserts the matched vehicle into the scatter without breaking the linked state of the rest of the system. This is a useful bridge between a user's vague mental model of a car and the real dataset rows available for inspection.
+
+The matching logic uses weighted differences in engine size, cylinders, and fuel consumption, plus an added penalty for class mismatch. A threshold prevents very poor matches from being presented as meaningful. This makes the interaction more credible than a simple nearest numerical lookup with no guardrails.
+
+The Vehicle Class Explorer summarizes selected classes with a radar chart. The chart uses five axes: average engine size, average cylinders, average combined fuel consumption, a heuristic fuel-type rank, and an approximate gear count parsed from transmission codes. A radar chart is appropriate here because the task is not precise reading of one numeric variable; it is quick shape comparison between class profiles. The tradeoff is that radar charts can hide variance and exaggerate polygon area, so we use them only for class-level summaries, not for the full vehicle table.
+
+\subsection{Sampled Vehicle Scatter}
+The scatterplot in Figure~\ref{fig:scatteroverview} maps combined fuel consumption on the x-axis and CO2 emissions on the y-axis. Point size encodes engine size, and color encodes fuel type using the same palette later reused in the crown. By default, the view begins with a small sample rather than all 7,385 vehicles. This is a deliberate usability choice: a sparse opening scene is easier to read and encourages interaction. The user can then expand to the full dataset when ready.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{scatter-make-overview.png}
+\caption{The global comparison layer. The scatterplot shows individual vehicles in fuel-versus-CO2 space, while the make overview summarizes manufacturers by model count and average CO2.}
+\label{fig:scatteroverview}
+\end{figure}
+
+This chart is appropriate because it shows a relationship that many users intuitively expect but still need to verify: higher fuel consumption usually comes with higher CO2 emissions, but not all vehicles with similar fuel use behave identically. The chart also supports class-based filtering, fuel-type dimming, and make highlighting through stroke and opacity changes. Its main weakness is overplotting when all vehicles are shown, although the initial sample and linked filters reduce that problem enough for exploratory use.
+
+\subsection{Make Overview}
+The Make Overview combines bars and a line in one chart. Bars encode the number of model entries per make, while the orange line encodes average CO2 emissions. This dual encoding supports a useful comparison that neither mark type could handle alone: a make might offer many vehicles but not necessarily clean ones, or it might have few entries but a distinctive emissions profile.
+
+The choice of a bar-plus-line composition fits the task because the two measures have different semantics and different scales. Count deserves the visual weight of bars, while average CO2 benefits from a trend line that can reveal peaks and dips across makes. Clicking a bar or line point changes the primary make shown in the crown, and the dedicated brush lane below the bars supports make highlighting without forcing the user to brush directly through crowded labels. A limitation is that the line connects categorical makes, so the visual continuity is only for scanning, not for implying a continuous underlying variable.
+
+\subsection{CO2 Crown}
+The CO2 Crown is the center of the project and is shown in Figures~\ref{fig:crownsingle} and \ref{fig:crowncompare}. For a selected make, the crown filters the dataset to that manufacturer, sorts vehicles from lowest to highest CO2, and arranges them along a semicircular arc. The left side therefore corresponds to the cleaner end of the make's catalog, and the right side to the heavier-emitting end.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{crown-single-ford.png}
+\caption{A single-make CO2 Crown for Ford. Vehicles are ranked from lower CO2 on the left to higher CO2 on the right.}
+\label{fig:crownsingle}
+\end{figure}
+
+Inside the crown, angle encodes rank, spoke length encodes a secondary metric, point size encodes engine size, and color encodes fuel type. The user can switch the spoke metric between city-highway fuel-consumption gap, combined fuel consumption, and cylinders. This allows the view to keep CO2 as the organizing backbone while asking a second question at the same time: for example, are the highest-emission vehicles also the ones with the largest city-highway gap?
+
+The crown also includes a focus lens above the main arc. Hovering or pinning a vehicle opens a magnified neighborhood of nearby ranks, which is useful because the full crown often contains hundreds of vehicles. This prevents the view from collapsing under its own density.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{crown-compare-ford-toyota.png}
+\caption{Comparison mode opens a second crown instead of overlaying two makes on the same arc. This preserves rank readability inside each manufacturer.}
+\label{fig:crowncompare}
+\end{figure}
+
+Comparison mode places two crowns side by side rather than overlaying two makes in one radial frame. That was the right tradeoff. Overlay would save space, but it would also destroy the rank structure that makes the crown readable in the first place.
+
+\subsection{Pinned Vehicle Cards}
+Pinned detail cards turn a transient hover into stable evidence. Figure~\ref{fig:pinnedcards} shows one pinned vehicle in each crown during comparison mode.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{crown-pinned-cards.png}
+\caption{Pinned vehicle cards preserve detailed information while the user continues exploring. Each card is tied to a selected crown point and inherits that crown's slot.}
+\label{fig:pinnedcards}
+\end{figure}
+
+These cards are important because the crown itself prioritizes pattern, rank, and relative structure over text labels. Once the user identifies a promising vehicle, the card surfaces the exact model, class, CO2, engine size, cylinders, fuel type, transmission, and current crown metric value. In other words, the cards prevent the innovative view from becoming a dead end.
+
+\section{Innovative View: CO2 Crown}
+The CO2 Crown is the project's innovative view because it is not a direct reuse of a standard chart type. It borrows ideas from radial ranking, lollipop plots, and local focus views, but combines them into a design tailored to this dataset and task.
+
+Its novelty comes from four connected decisions.
+
+\begin{itemize}
+\item \textbf{Ranked radial ordering.} The crown does not simply place points around a circle. It imposes a meaningful order by sorting a make's vehicles from lower to higher CO2 and mapping that order onto an arc. This gives the user a clear left-to-right reading direction inside a radial layout.
+\item \textbf{Separate ranking and spoke metric.} CO2 determines angular rank, while spoke length can encode city-highway gap, combined fuel consumption, or cylinders. This decoupling is important. It lets the user keep one stable backbone while asking a second comparative question.
+\item \textbf{Manufacturer-scale detail.} Average-based views flatten a brand into a single number. The crown keeps every vehicle visible while still preserving structure. That makes it possible to see whether a make has a smooth progression, clusters of similar vehicles, or a sharp high-emission tail.
+\item \textbf{Integrated comparison and focus.} The side-by-side second crown, the hover zoom lens, and the pinning system are not accessories. They extend the basic radial ranking so it remains usable at real dataset scale.
+\end{itemize}
+
+What is new here is therefore not ``a chart in a circle''; it is a radial ranked detail view designed specifically for within-make emissions exploration. The spoke metaphor works well because it resembles a crown or fan of models radiating out from a shared make baseline. The metaphor is suggestive without becoming decorative. It helps the user remember that the view is about variation \emph{inside} one manufacturer.
+
+The crown still has tradeoffs. Precise quantitative comparison across two different makes is weaker than in a fully linear aligned chart, and extremely dense makes still require the focus lens for close reading. Those are acceptable costs because the crown solves the more important problem: it reveals within-brand structure in a compact, memorable, and interactive form.
+
+\section{Interaction Design}
+The project has strong and meaningful interactivity, with several interactions that transform the analytical context across multiple views.
+
+\subsection*{Build-a-Car nearest-match query}
+The sliders and class selector become meaningful only when combined with the \emph{Build!} action. The query searches for a nearby real vehicle, inserts it into the scatter, and reports the matched row. This is a true analytical interaction because it turns a user-specified hypothetical car into a concrete dataset example.
+
+\subsection*{Class selection linked to radar and scatter}
+Selecting class buttons updates the radar chart and filters the scatterplot at the same time. Figure~\ref{fig:linkedfilter} shows compact and SUV selections affecting both the class summary and the visible scatter points.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth,height=0.88\textheight,keepaspectratio]{linked-class-filtering.png}
+\caption{Linked filtering in action. Class selection updates the radar chart and simultaneously filters the scatter to the active vehicle groups.}
+\label{fig:linkedfilter}
+\end{figure}
+
+This interaction is substantial because it coordinates two different representations: one aggregate and one instance-based. The user sees both what a class typically looks like and where its member vehicles sit in emissions space.
+
+\subsection*{Scatter and make overview selecting the crown's active make}
+Clicking a scatter point or a make overview bar changes the primary make in the crown. This is one of the system's most important transitions because it moves the user from global comparison into within-make inspection. The interaction is not a tooltip or a cosmetic highlight; it redraws the crown around a new subset of the data.
+
+\subsection*{Fuel filtering across crown and scatter}
+Fuel-type toggles dim or isolate vehicles consistently in the scatter and both crowns. This interaction matters because fuel family is analytically important in this dataset and because the consistent encoding helps the user trace those effects across views.
+
+\subsection*{Compare-make mode}
+Choosing a second make opens a second crown rather than replacing the first. That lets the user compare two manufacturers while preserving the original context. It is a structural interaction because it changes the layout and the scope of analysis, not just the appearance of a single chart.
+
+\subsection*{Hover zoom and pinning}
+Hovering in the crown opens a local rank neighborhood, while clicking pins a vehicle and fills a persistent detail card. This pair of interactions handles the classic tradeoff between overview and detail. Hover supports fluid inspection; pinning supports memory and comparison.
+
+\subsection*{Brush-based make highlighting}
+The overview chart includes a brush lane that writes a list of brushed makes into shared state. The scatter then dims all other makes. This is another meaningful coordinated interaction because it lets the user isolate selected manufacturers without discarding the broader context of the plot.
+
+Taken together, these interactions clearly go beyond ordinary widgets. At least five of them change what data is shown, what subset is active, or how multiple views coordinate: build-a-car matching, class-linked filtering, make selection from scatter/overview into the crown, fuel filtering across views, and crown compare mode with pinning.
+
+\section{Implementation Details}
+The codebase is organized into focused modules with a shared application state.
+
+\begin{itemize}
+\item \texttt{js/main.js} loads \texttt{data.csv}, prepares derived structures, creates all views, and wires the page-level controls.
+\item \texttt{js/data.js} cleans numeric fields, derives the city-highway gap, samples points, computes manufacturer summaries, normalizes classes, and performs nearest-match search for Build a Car.
+\item \texttt{js/state.js} creates the shared store. It holds the current scatter points, primary and secondary makes, brushed makes, active fuel filters, active vehicle classes, crown metric, and hover/pin focus state for both crown slots.
+\item \texttt{js/scatter.js} renders the fuel-versus-CO2 scatterplot and listens to shared state changes for filtering, highlighting, and crown-linked emphasis.
+\item \texttt{js/barchart.js} renders the make overview, including the dual bar/line encoding and the brush lane.
+\item \texttt{js/spider.js} defines class groups, computes class averages, parses transmission codes into an approximate gear count, and draws the radar chart.
+\item \texttt{js/crown.js} implements the custom radial view, metric switching, comparison mode, focus lens, side annotations, and pinned detail panels.
+\item \texttt{js/interactions.js} provides slider-label binding for the build panel.
+\end{itemize}
+
+The architectural pattern is simple and effective. Each view subscribes to the same store, and each interaction writes small, meaningful changes back into that store. For example, selecting a second make updates \texttt{secondaryMake}; crown panels, select boxes, and comparison layout all react from there. Similarly, brushing the overview writes a \texttt{brushedMakes} list; the scatter reads it and dims all other points.
+
+Several implementation choices are worth noting. The dataset is converted into numeric fields up front so later view code can avoid repeated parsing. Scatter points use generated \texttt{instanceId} values so the same source vehicle can be added again as a new sampled or built point without breaking D3 data joins. The Build a Car interaction uses a weighted score with a mismatch penalty and a threshold, which is a better user experience than always returning the nearest row no matter how poor the match. The crown stores hover and pin state separately for the primary and secondary panels, allowing true side-by-side comparison instead of one shared focus that would constantly overwrite itself.
+
+In short, the implementation is technically modest in scale but disciplined in structure. The shared-state design is what makes the interface feel coordinated rather than stitched together.
+
+\section{Reflection: What Worked and What Was Challenging}
+What worked best was the staged flow from broad to narrow analysis. The class explorer, scatter, overview, and crown each answer a different kind of question, and those questions line up with the way a real user would reason about a vehicle choice. The consistent fuel-type color mapping also helped the interface feel coherent.
+
+The main challenge was balancing density and readability. The dataset is large enough that a default all-points scatter would be visually heavy, and some makes have hundreds of entries, which can make within-make detail difficult. The project addresses this with initial sampling, dimming, focus lenses, and pinning, but the tension never disappears completely.
+
+Another challenge was aggregation. The radar chart is useful for a quick class profile, yet it necessarily compresses variation within a class. The make overview is useful for count and average CO2, yet it can never replace direct inspection of individual vehicles. The crown itself solves some of this, but only after the user has already narrowed to a make.
+
+There are also domain limitations. Because the dataset lacks cost, model year, occupancy, and lifecycle emissions, the system cannot present a complete definition of ``best.'' That is acceptable for this project, but it is important to say explicitly. The tool helps make emissions tradeoffs legible; it does not settle the entire purchase decision.
+
+\section{Conclusion}
+The family's question at the start of this report was simple: how do we choose a car without treating emissions as invisible? The final system answers that question by making the decision process visual and sequential. Users can begin with a rough idea of class and specifications, see where vehicles sit in the larger emissions landscape, narrow to makes, and then inspect the internal spread of those makes through the CO2 Crown.
+
+The implementation contains more than three distinct views, including a custom innovative component. It includes more than three meaningful interactions, and those interactions coordinate across the system rather than staying isolated. Most importantly, the design choices make sense for the dataset. The interface does not pretend that emissions are the only thing a person should care about, but it does make them much harder to ignore.
+
+That is a good outcome for a common-good visualization project. Public data is only useful when people can actually read it, compare it, and connect it to decisions they already need to make.
+
+\begin{thebibliography}{9}
+
+\bibitem{dataset}
+Project repository dataset, \texttt{data.csv}, the normalized CSV used directly by the D3 implementation.
+
+\bibitem{kaggledataset}
+Debajyoti Podder, \emph{CO2 Emission by Vehicles}, Kaggle dataset page, accessed April 5, 2026. Available at \url{https://www.kaggle.com/datasets/debajyotipodder/co2-emission-by-vehicles}.
+
+\bibitem{originalcsv}
+\emph{CO2 Emissions\_Canada.csv}, attached in the repository under \texttt{Original\_Dataset/}, the original dataset file corresponding to the Kaggle release.
+
+\bibitem{datadescription}
+\emph{Data Description.csv}, attached in the repository under \texttt{Original\_Dataset/}, documenting abbreviations, fuel codes, transmission codes, and units used by the dataset.
+
+\bibitem{d3}
+D3.js v7, loaded by \texttt{index.html}. Available at \url{https://d3js.org/}.
+
+\end{thebibliography}
 
 \end{document}
