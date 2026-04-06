@@ -44,6 +44,7 @@ export function buildClassStats(fullData) {
       fuel:      d3.mean(rows, d => d.fuel),
       fuelrank:  avgFuelRank,
       gears:     d3.mean(rows, d => getGears(d.transmission)),
+      co2:       d3.mean(rows, d => d.co2),
       count:     rows.length
     };
   });
@@ -53,11 +54,12 @@ export function buildClassStats(fullData) {
 // Spider axes
 const AXES = [
   { key: "engine",    label: "Engine Size",      unit: "L",       domain: [1, 8] },
-  { key: "cylinders", label: "Cylinders",         unit: "",        domain: [2, 16] },
-  { key: "fuel",      label: "Fuel Consumption",  unit: "L/100km", domain: [4, 20] },
-  { key: "fuelrank",  label: "Fuel Type",          unit: "",        domain: [1, 5],
+  { key: "cylinders", label: "Cylinders",        unit: "",        domain: [2, 16] },
+  { key: "fuel",      label: "Fuel Consumption", unit: "L/100km", domain: [4, 20] },
+  { key: "co2",       label: "CO₂ Emissions",    unit: "g/km",    domain: [100, 400] },
+  { key: "fuelrank",  label: "Fuel Type",        unit: "",        domain: [1, 5],
     tickFormat: v => ({ 1:"E",2:"N",3:"X",4:"Z",5:"D" }[Math.round(v)] ?? "") },
-  { key: "gears",     label: "Gears",              unit: "",        domain: [1, 10] }
+  { key: "gears",     label: "Gears",            unit: "",        domain: [1, 10] }
 ];
 
 const N = AXES.length;
