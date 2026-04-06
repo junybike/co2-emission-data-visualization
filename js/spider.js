@@ -127,7 +127,7 @@ export function createSpider(store, classStats) {
   const radius = Math.min(W, 280) / 2 - 32;
   const cx = W / 2;
   const cy = radius + 44;
-  const svgH = cy + radius + 40;
+  const svgH = cy + radius + 85;
 
   const svg = container.append("svg")
     .attr("width", "100%")
