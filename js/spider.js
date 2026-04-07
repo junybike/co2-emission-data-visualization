@@ -185,14 +185,13 @@ export function createSpider(store, classStats) {
     if (axis.tickFormat) {
       for (let l = 1; l <= levels; l++) {
         const r = (radius / levels) * l;
-        const val = axis.domain[0] + ((axis.domain[1] - axis.domain[0]) / levels) * l;
         const [tx, ty] = radialPoint(angle, r + 4);
         g.append("text")
           .attr("x", tx).attr("y", ty)
           .attr("text-anchor", "middle")
           .attr("font-size", 8)
           .attr("fill", "#94a3b8")
-          .text(axis.tickFormat(val));
+          .text(axis.tickFormat(l));
       }
     }
   });
