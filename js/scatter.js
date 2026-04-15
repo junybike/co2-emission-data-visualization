@@ -216,7 +216,7 @@ export function createScatter(store) {
       .transition(transition)
       .attr("cx", d => x(d.fuel))
       .attr("cy", d => y(d.co2))
-      .attr("r", d => Math.max(4, d.engine * 1.7))
+      .attr("r", d => Math.max(4, d.engine * 2))
       .attr("fill", d => {
         const color = d3.color(FUEL_TYPE_COLORS[d.fueltype] ?? "#4c6073");
         const isHovered = focusedCars.some(car => matchesFocus(d, car));
@@ -231,25 +231,25 @@ export function createScatter(store) {
         if (matchesFocus(d, state.pinnedCars?.primary) || matchesFocus(d, state.pinnedCars?.secondary)) return "#9a3412";
         if (matchesFocus(d, state.hoveredCars?.primary) || matchesFocus(d, state.hoveredCars?.secondary)) return "#f97316";
         if (d.make === state.primaryMake) return "#0f172a";
-        if (d.make === state.secondaryMake) return "#c65d2e";
+        if (d.make === state.secondaryMake) return "#0f172a";
         return "white";
       })
       .attr("stroke-width", d => {
         if (matchesFocus(d, state.pinnedCars?.primary) || matchesFocus(d, state.pinnedCars?.secondary)) return 2.8;
         if (matchesFocus(d, state.hoveredCars?.primary) || matchesFocus(d, state.hoveredCars?.secondary)) return 2.2;
-        if (d.make === state.primaryMake) return 1.8;
-        if (d.make === state.secondaryMake) return 1.5;
+        if (d.make === state.primaryMake) return 2;
+        if (d.make === state.secondaryMake) return 2;
         return 1.1;
       })
       .attr("opacity", d => {
         const highlighted = focusedCars.some(car => matchesFocus(d, car));
 
         if (highlighted) return 1;
-        if (!activeFuelTypes.has(d.fueltype)) return 0.12;
-        if (brushedMakes.size > 0 && !brushedMakes.has(d.make)) return 0.15;
+        if (!activeFuelTypes.has(d.fueltype)) return 0.1;
+        if (brushedMakes.size > 0 && !brushedMakes.has(d.make)) return 0.1;
         if (d.make === state.primaryMake) return 0.95;
         if (d.make === state.secondaryMake) return 0.88;
-        return 0.75;
+        return 0.55;
       });
 
     circles

@@ -2,9 +2,10 @@
 
 A D3.js interactive visualization project for **CMPT 467** focused on helping users explore vehicle fuel consumption and CO2-emission tradeoffs.
 
-The project combines several coordinated views so a user can move from broad comparison to detailed inspection: first comparing vehicle classes, then scanning the larger fuel-versus-emissions space, then drilling into manufacturer-level patterns, and finally inspecting individual cars inside a custom radial view called the **CO2 Crown**.
+The project combines several coordinated views so a user can move from broad comparison to detailed inspection: first comparing vehicle classes, then scanning the larger fuel-versus-emissions space, then drilling into manufacturer-level patterns, and finally inspecting individual cars inside a custom radial view called the **CO2 Crown**.  
 
-**Documentation**
+
+**Documentation (not completed yet)**
 
 - [Final Report (PDF)](Documentation/report.pdf)
 - [Report Source (LaTeX)](Documentation/report.tex)
