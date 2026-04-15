@@ -1,16 +1,14 @@
 # CO2 Emission Explorer
 
-A D3.js interactive visualization project for **CMPT 467** focused on helping users explore vehicle fuel consumption and CO2-emission tradeoffs.
+A D3.js interactive visualization project for **CMPT 467** focused on helping users explore vehicle fuel-consumption and CO2-emission tradeoffs.
 
-The project combines several coordinated views so a user can move from broad comparison to detailed inspection: first comparing vehicle classes, then scanning the larger fuel-versus-emissions space, then drilling into manufacturer-level patterns, and finally inspecting individual cars inside a custom radial view called the **CO2 Crown**.  
+The project combines several coordinated views so a user can move from broad comparison to detailed inspection: first comparing vehicle classes, then scanning the larger fuel-versus-emissions space, then drilling into manufacturer-level patterns, and finally inspecting individual cars inside a custom radial view called the **CO2 Crown**.
 
-
-**Documentation (not completed yet)**
+## Final Documentation
 
 - [Final Report (PDF)](Documentation/report.pdf)
-- [Report Source (LaTeX)](Documentation/report.tex)
 
-![CO2 Emission Explorer interface](Documentation/images/overall-interface.png)
+![CO2 Emission Explorer interface](Documentation/overall-interface.png)
 
 ## Project Highlights
 
@@ -18,7 +16,7 @@ The project combines several coordinated views so a user can move from broad com
 - **Vehicle Class Explorer** compares broader classes such as compact, SUV, van, and pickup using a radar chart.
 - **Sampled Vehicle Scatter** shows individual vehicles in fuel-consumption versus CO2 space.
 - **Make Overview** combines manufacturer model counts with average CO2 emissions.
-- **CO2 Crown** is the project's innovative view: a ranked radial manufacturer view that arranges vehicles from lower to higher CO2 and supports side-by-side make comparison.
+- **CO2 Crown** is the project’s innovative view: a ranked radial manufacturer view that arranges vehicles from lower to higher CO2 and supports side-by-side make comparison.
 - **Pinned Vehicle Cards** keep exact details visible while the user continues exploring.
 
 ## Coordinated Interactions
@@ -93,10 +91,19 @@ python3 -m http.server 8123
 │   ├── spider.js
 │   └── crown.js
 └── Documentation/
-    ├── report.tex
     ├── report.pdf
-    ├── pages/
-    └── images/
+    ├── overall-interface.png
+    ├── build-class-explorer.png
+    ├── scatter-make-overview.png
+    ├── linked-class-filtering.png
+    ├── crown-single-ford.png
+    ├── crown-compare-ford-toyota.png
+    ├── crown-pinned-cards.png
+    ├── distinct-jason.png
+    ├── distinct-aryaman.png
+    ├── distinct-mayank.png
+    ├── variations-a.png
+    └── variations-b.png
 ```
 
 ## Implementation Overview
@@ -152,27 +159,24 @@ python3 -m http.server 8123
 
 ## Screenshots
 
-- [Overall Interface](Documentation/images/overall-interface.png)
-- [Build a Car + Class Explorer](Documentation/images/build-class-explorer.png)
-- [Scatter + Make Overview](Documentation/images/scatter-make-overview.png)
-- [Linked Class Filtering](Documentation/images/linked-class-filtering.png)
-- [Single CO2 Crown](Documentation/images/crown-single-ford.png)
-- [Compare Mode Crown](Documentation/images/crown-compare-ford-toyota.png)
-- [Pinned Vehicle Cards](Documentation/images/crown-pinned-cards.png)
+- [Overall Interface](Documentation/overall-interface.png)
+- [Build a Car + Class Explorer](Documentation/build-class-explorer.png)
+- [Scatter + Make Overview](Documentation/scatter-make-overview.png)
+- [Linked Class Filtering](Documentation/linked-class-filtering.png)
+- [Single CO2 Crown](Documentation/crown-single-ford.png)
+- [Compare Mode Crown](Documentation/crown-compare-ford-toyota.png)
+- [Pinned Vehicle Cards](Documentation/crown-pinned-cards.png)
 
-## Documentation
+## Design Process Figures
 
-The final project write-up is available here:
-
-- [Final Project Report PDF](Documentation/report.pdf)
-
-If you want the source:
-
-- [LaTeX report source](Documentation/report.tex)
-- [Title page source](Documentation/pages/titlepage.tex)
+- [Jason's conceptually distinct sketches](Documentation/distinct-jason.png)
+- [Aryaman's conceptually distinct sketches](Documentation/distinct-aryaman.png)
+- [Mayank's conceptually distinct sketches](Documentation/distinct-mayank.png)
+- [Chosen-direction variations 1–6](Documentation/variations-a.png)
+- [Chosen-direction variations 7–9](Documentation/variations-b.png)
 
 ## Team
 
-- Aryaman Bahuguna
-- Mayank Mayank
-- Jason Lee
+- Aryaman Bahuguna (301563474)
+- Mayank Mayank    (301563549)
+- Jason Lee        (301556953)
